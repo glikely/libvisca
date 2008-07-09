@@ -1,0 +1,47 @@
+libVISCA, (c) 2002-2007 Damien Douxchamps <douxchamps@ieee.org>
+
+Changes in version 1.0.1:
+   - Fixed pan position and moved a #include (Simon Cooper)
+	
+Changes in version 1.0.0:
+
+   - windows compatibility, thanks to Alexander Klaeser.
+   - D30/31 special functions added by Simon Bichler
+   - added a command-line control program by the same author.
+	
+Changes in version 0.06:
+
+   - Little bug corected by David Austin
+	
+Changes in version 0.05:
+	
+   - Pan/tilt extensions added, thanks to Mikael Rosbacke
+	
+Changes in version 0.04:
+
+   Jul 25, 2002, by Damien Douxchamps
+   - finished new packet structure and functions
+   - corrected some bug found by Luke Fletcher
+
+   Apr 16, 2002, by Damien Douxchamps
+   - new packet structure and associated functions.
+	
+Changes in version 0.03
+	
+   Apr 12, 2002, by Damien Douxchamps
+   - fixed an awful bug in packet generation: we wrote twice on packet[0]!
+     (thanks to Floyd)
+	
+Changes in version 0.02
+	
+   Apr 08, 2002, by Damien Douxchamps
+   - added all inquiries functions.
+   - moved #defines to .h
+	
+Changes in version 0.01
+	
+   Apr 07, 2002, by Damien Douxchamps
+   - initial release.
+   - commands fully functional
+   - almost no inquiries implemented
+   - basic error checking and error code propagation
