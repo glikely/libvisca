@@ -2,6 +2,7 @@ libVISCA, (c) 2002-2007 Damien Douxchamps <douxchamps@ieee.org>
 
 2008-08-02 Damien Douxchamps
 
+   SVN 08: patch from Bastian Pfeging for RS232 input options.
    SVN 07: change "interface" to "iface" since it's a reserved word
 	   on MS.
    SVN 06: fix SVN versions

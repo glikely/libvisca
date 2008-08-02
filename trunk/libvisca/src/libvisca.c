@@ -270,8 +270,12 @@ VISCA_open_serial(VISCAInterface_t *iface, char *device_name)
       iface->options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); /* raw input */
 
       /* input flags */
-      iface->options.c_iflag &= ~(INPCK | ISTRIP); /* no parity */
-      iface->options.c_iflag &= ~(IXON | IXOFF | IXANY); /* no soft ctl */
+      /*
+      iface->options.c_iflag &= ~(INPCK | ISTRIP); // no parity
+      iface->options.c_iflag &= ~(IXON | IXOFF | IXANY); // no soft ctl
+      */
+      /* patch: bpflegin: set to 0 in order to avoid invalid pan/tilt return values */
+      interface->options.c_iflag = 0;
 
       /* output flags */
       iface->options.c_oflag &= ~OPOST; /* raw output */
