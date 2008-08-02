@@ -1,5 +1,11 @@
 libVISCA, (c) 2002-2007 Damien Douxchamps <douxchamps@ieee.org>
 
+2008-08-02 Damien Douxchamps
+
+   SVN 01: fixed a bit error in VISCA_set_address(). Thanks to
+	   James Bremner for spotting this.
+
+	
 Changes in version 1.0.1:
    - Fixed pan position and moved a #include (Simon Cooper)
 	
