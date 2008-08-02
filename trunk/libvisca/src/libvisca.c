@@ -349,7 +349,7 @@ VISCA_set_address(VISCAInterface_t *interface, int *camera_num)
          every packet should be 88 30 0x FF, x being
          the camera id+1. The number of cams will thus be
          ibuf[bytes-2]-1  */
-      if ((interface->bytes & 0x11)!=0) /* check multiple of 4 */
+      if ((interface->bytes & 0x3)!=0) /* check multiple of 4 */
 	return VISCA_FAILURE;
       else
 	{
