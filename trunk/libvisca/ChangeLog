@@ -2,7 +2,9 @@ libVISCA, (c) 2002-2007 Damien Douxchamps <douxchamps@ieee.org>
 
 2008-08-02 Damien Douxchamps
 
-   SVN 01: fixed a bit error in VISCA_set_address(). Thanks to
+   SVN 06: fix SVN versions
+   SVN 05: commit changelog
+   SVN 04: fixed a bit error in VISCA_set_address(). Thanks to
 	   James Bremner for spotting this.
 
 	
