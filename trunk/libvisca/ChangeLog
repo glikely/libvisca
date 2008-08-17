@@ -2,6 +2,7 @@ libVISCA, (c) 2002-2008 Damien Douxchamps <http://damien.douxchamps.net/>
 
 2008-08-17 Damien Douxchamps
 
+   SVN 11: remove more useless files
    SVN 10: remove useless files
    SVN 09: move the src/ directory to visca/
 	
