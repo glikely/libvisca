@@ -39,8 +39,8 @@ main(int argc, char **argv)
   VISCACamera_t camera;
   unsigned char packet[3000];
   int i, bytes, camera_num;
-  UInt8_t value;
-  UInt16_t zoom;
+  uint8_t value;
+  uint16_t zoom;
   int pan_pos, tilt_pos;
 
   if (argc<2)

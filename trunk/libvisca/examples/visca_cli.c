@@ -341,30 +341,41 @@ get_md_obj_pos (returns the center position of the detection frame divided
 
 #include <stdlib.h>
 #include <stdio.h>
+#include "visca/libvisca.h"
+#ifdef WIN
+#include <Windows.h>
+#include <crtdbg.h>
+#else
 #include <unistd.h> /* UNIX standard function definitions */
-#include <fcntl.h> /* File control definitions */
-#include <errno.h> /* Error number definitions */
 #include <termios.h> /* POSIX terminal control definitions */
 #include <sys/ioctl.h>
-#include <string.h>
+#include <stdint.h>
+#endif
 
-#include "../visca/libvisca.h"
+#include <fcntl.h> /* File control definitions */
+#include <errno.h> /* Error number definitions */
+#include <string.h>
 
 #define DEBUG 0
 
 #define D30ONLY 0
 
 /*The device the camera is attached to*/
-char *ttydev = "/dev/ttyS0";
+/*The default device the camera is attached to*/
+#ifdef WIN
+char *ttydev = "COM1:";
+#else
+ char *ttydev = "/dev/ttyS0";
+#endif
 
 /*Structures needed for the VISCA library*/
-VISCAInterface_t interface;
+VISCAInterface_t iface;
 VISCACamera_t camera;
 
 /*print usage message and exit*/
 void print_usage() {
   fprintf(stderr,"Usage: visca-cli [-d <serial port device>] command\n");
-  fprintf(stderr,"  default serial port device: /dev/ttyS0\n");      
+  fprintf(stderr,"  default serial port device: %s\n",ttydev);      
   fprintf(stderr,"  for available commands see sourcecode...\n");
   exit(1);  
 }
@@ -425,36 +436,67 @@ char *process_commandline(int argc, char **argv) {
 
 void open_interface() {
   int camera_num;
-  if (VISCA_open_serial(&interface, ttydev)!=VISCA_SUCCESS) {
+  if (VISCA_open_serial(&iface, ttydev)!=VISCA_SUCCESS) {
     fprintf(stderr,"visca-cli: unable to open serial device %s\n",ttydev);
     exit(1);
   }
 
-  interface.broadcast=0;
-  VISCA_set_address(&interface, &camera_num);
+  iface.broadcast=0;
+  VISCA_set_address(&iface, &camera_num);
+  if(VISCA_set_address(&iface, &camera_num)!=VISCA_SUCCESS) {
+#ifdef WIN
+    _RPTF0(_CRT_WARN,"unable to set address\n");
+#endif
+    fprintf(stderr,"visca-cli: unable to set address\n");
+    VISCA_close_serial(&iface);
+    exit(1);
+  }
+
   camera.address=1;
-  VISCA_clear(&interface, &camera);
-  VISCA_get_camera_info(&interface, &camera);
+
+
+  if(VISCA_clear(&iface, &camera)!=VISCA_SUCCESS) {
+#ifdef WIN
+    _RPTF0(_CRT_WARN,"unable to clear interface\n");
+#endif
+    fprintf(stderr,"visca-cli: unable to clear interface\n");
+    VISCA_close_serial(&iface);
+    exit(1);
+  }
+  if(VISCA_get_camera_info(&iface, &camera)!=VISCA_SUCCESS) {
+#ifdef WIN
+    _RPTF0(_CRT_WARN,"unable to oget camera infos\n");
+#endif
+    fprintf(stderr,"visca-cli: unable to oget camera infos\n");
+    VISCA_close_serial(&iface);
+    exit(1);
+  }
+
 #if DEBUG 
   fprintf(stderr,"Camera initialisation successful.\n");
 #endif
 }
 
-void close_interface() {
+void close_interface()
+{
+#ifdef WIN
+  Sleep(2000);
+#else
+  // read the rest of the data: (should be empty)
   unsigned char packet[3000];
   int i, bytes;
 
-  // read the rest of the data: (should be empty)
-  ioctl(interface.port_fd, FIONREAD, &bytes);
+  ioctl(iface.port_fd, FIONREAD, &bytes);
   if (bytes>0) {
     fprintf(stderr, "ERROR: %d bytes not processed: ", bytes);
-    read(interface.port_fd, &packet, bytes);
+    read(iface.port_fd, &packet, bytes);
     for (i=0;i<bytes;i++) {
       fprintf(stderr,"%2x ",packet[i]);
     }
     fprintf(stderr,"\n");
   }
-  VISCA_close_serial(&interface);
+#endif
+  VISCA_close_serial(&iface);
 }
 
 /* This subroutine tries to execute the commandline given in char *commandline
@@ -493,8 +535,8 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   VISCATitleData_t *temptitle;
   
   /*Variables that hold return values from VISCA routines*/
-  UInt8_t value8, value8b, value8c;
-  UInt16_t value16;
+  uint8_t value8, value8b, value8c;
+  uint16_t value16;
   
   /*tokenize the commandline*/
   command = strtok(commandline, " ");
@@ -545,42 +587,42 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 #endif
 
   if (strcmp(command, "set_zoom_tele") == 0) {
-    if (VISCA_set_zoom_tele(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_zoom_tele(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_zoom_wide") == 0) {
-    if (VISCA_set_zoom_wide(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_zoom_wide(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_zoom_stop") == 0) {
-    if (VISCA_set_zoom_stop(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_zoom_stop(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_focus_far") == 0) {
-    if (VISCA_set_focus_far(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_focus_far(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_focus_near") == 0) {
-    if (VISCA_set_focus_near(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_focus_near(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_focus_stop") == 0) {
-    if (VISCA_set_focus_stop(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_focus_stop(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -588,7 +630,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_focus_one_push") == 0) {
-    if (VISCA_set_focus_one_push(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_focus_one_push(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -597,7 +639,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_focus_infinity") == 0) {
-    if (VISCA_set_focus_infinity(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_focus_infinity(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -606,7 +648,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_focus_autosense_high") == 0) {
-    if (VISCA_set_focus_autosense_high(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_focus_autosense_high(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -615,7 +657,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_focus_autosense_low") == 0) {
-    if (VISCA_set_focus_autosense_low(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_focus_autosense_low(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -623,7 +665,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 #endif
 
   if (strcmp(command, "set_whitebal_one_push") == 0) {
-    if (VISCA_set_whitebal_one_push(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_whitebal_one_push(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -631,7 +673,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_rgain_up") == 0) {
-    if (VISCA_set_rgain_up(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_rgain_up(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -640,7 +682,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_rgain_down") == 0) {
-    if (VISCA_set_rgain_down(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_rgain_down(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -649,7 +691,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_rgain_reset") == 0) {
-    if (VISCA_set_rgain_reset(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_rgain_reset(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -658,7 +700,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_bgain_up") == 0) {
-    if (VISCA_set_bgain_up(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_bgain_up(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -667,7 +709,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_bgain_down") == 0) {
-    if (VISCA_set_bgain_down(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_bgain_down(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -676,7 +718,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_bgain_reset") == 0) {
-    if (VISCA_set_bgain_reset(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_bgain_reset(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -684,84 +726,84 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 #endif
 
   if (strcmp(command, "set_shutter_up") == 0) {
-    if (VISCA_set_shutter_up(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_shutter_up(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_shutter_down") == 0) {
-    if (VISCA_set_shutter_down(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_shutter_down(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_shutter_reset") == 0) {
-    if (VISCA_set_shutter_reset(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_shutter_reset(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_iris_up") == 0) {
-    if (VISCA_set_iris_up(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_iris_up(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_iris_down") == 0) {
-    if (VISCA_set_iris_down(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_iris_down(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_iris_reset") == 0) {
-    if (VISCA_set_iris_reset(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_iris_reset(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_gain_up") == 0) {
-    if (VISCA_set_gain_up(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_gain_up(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_gain_down") == 0) {
-    if (VISCA_set_gain_down(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_gain_down(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_gain_reset") == 0) {
-    if (VISCA_set_gain_reset(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_gain_reset(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_bright_up") == 0) {
-    if (VISCA_set_bright_up(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_bright_up(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_bright_down") == 0) {
-    if (VISCA_set_bright_down(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_bright_down(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_bright_reset") == 0) {
-    if (VISCA_set_bright_reset(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_bright_reset(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -769,7 +811,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_aperture_up") == 0) {
-    if (VISCA_set_aperture_up(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_aperture_up(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -778,7 +820,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_aperture_down") == 0) {
-    if (VISCA_set_aperture_down(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_aperture_down(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -787,7 +829,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_aperture_reset") == 0) {
-    if (VISCA_set_aperture_reset(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_aperture_reset(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -796,7 +838,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_exp_comp_up") == 0) {
-    if (VISCA_set_exp_comp_up(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_exp_comp_up(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -805,7 +847,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_exp_comp_down") == 0) {
-    if (VISCA_set_exp_comp_down(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_exp_comp_down(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -814,7 +856,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_exp_comp_reset") == 0) {
-    if (VISCA_set_exp_comp_reset(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_exp_comp_reset(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -823,7 +865,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "set_title_clear") == 0) {
-    if (VISCA_set_title_clear(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_title_clear(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -831,42 +873,42 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 #endif
 
   if (strcmp(command, "set_irreceive_on") == 0) {
-    if (VISCA_set_irreceive_on(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_irreceive_on(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_irreceive_off") == 0) {
-    if (VISCA_set_irreceive_off(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_irreceive_off(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_irreceive_onoff") == 0) {
-    if (VISCA_set_irreceive_onoff(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_irreceive_onoff(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_pantilt_home") == 0) {
-    if (VISCA_set_pantilt_home(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_pantilt_home(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_pantilt_reset") == 0) {
-    if (VISCA_set_pantilt_reset(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_pantilt_reset(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_pantilt_limit_downleft_clear") == 0) {
-    if (VISCA_set_pantilt_limit_downleft_clear(&interface, &camera)
+    if (VISCA_set_pantilt_limit_downleft_clear(&iface, &camera)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -874,7 +916,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "set_pantilt_limit_upright_clear") == 0) {
-    if (VISCA_set_pantilt_limit_upright_clear(&interface, &camera)
+    if (VISCA_set_pantilt_limit_upright_clear(&iface, &camera)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -882,21 +924,21 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "set_datascreen_on") == 0) {
-    if (VISCA_set_datascreen_on(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_datascreen_on(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_datascreen_off") == 0) {
-    if (VISCA_set_datascreen_off(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_datascreen_off(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }  
 
   if (strcmp(command, "set_datascreen_onoff") == 0) {
-    if (VISCA_set_datascreen_onoff(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_datascreen_onoff(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -906,7 +948,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_power(&interface, &camera, boolarg)!=VISCA_SUCCESS) {
+    if (VISCA_set_power(&iface, &camera, boolarg)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -919,7 +961,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if (boolarg == 03) {
       boolarg = 0;
     }
-    if (VISCA_set_keylock (&interface, &camera, boolarg)!=VISCA_SUCCESS) {
+    if (VISCA_set_keylock (&iface, &camera, boolarg)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -930,7 +972,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_dzoom (&interface, &camera, boolarg)!=VISCA_SUCCESS) {
+    if (VISCA_set_dzoom (&iface, &camera, boolarg)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -941,7 +983,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_focus_auto (&interface, &camera, boolarg)!=VISCA_SUCCESS) {
+    if (VISCA_set_focus_auto (&iface, &camera, boolarg)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -952,7 +994,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_exp_comp_power (&interface, &camera, boolarg)
+    if (VISCA_set_exp_comp_power (&iface, &camera, boolarg)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -965,7 +1007,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_slow_shutter_auto (&interface, &camera, boolarg)
+    if (VISCA_set_slow_shutter_auto (&iface, &camera, boolarg)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -977,7 +1019,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_backlight_comp (&interface, &camera, boolarg)
+    if (VISCA_set_backlight_comp (&iface, &camera, boolarg)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -989,7 +1031,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_zero_lux_shot (&interface, &camera, boolarg) 
+    if (VISCA_set_zero_lux_shot (&iface, &camera, boolarg) 
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1002,7 +1044,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_ir_led (&interface, &camera, boolarg)!=VISCA_SUCCESS) {
+    if (VISCA_set_ir_led (&iface, &camera, boolarg)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -1014,7 +1056,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_mirror (&interface, &camera, boolarg)!=VISCA_SUCCESS) {
+    if (VISCA_set_mirror (&iface, &camera, boolarg)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -1026,7 +1068,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_freeze (&interface, &camera, boolarg)!=VISCA_SUCCESS) {
+    if (VISCA_set_freeze (&iface, &camera, boolarg)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -1038,7 +1080,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_display (&interface, &camera, boolarg)!=VISCA_SUCCESS) {
+    if (VISCA_set_display (&iface, &camera, boolarg)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -1050,7 +1092,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_date_display (&interface, &camera, boolarg)!=VISCA_SUCCESS){
+    if (VISCA_set_date_display (&iface, &camera, boolarg)!=VISCA_SUCCESS){
       return 46;
     }
     return 10;
@@ -1062,7 +1104,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_time_display (&interface, &camera, boolarg)!=VISCA_SUCCESS){
+    if (VISCA_set_time_display (&iface, &camera, boolarg)!=VISCA_SUCCESS){
       return 46;
     }
     return 10;
@@ -1074,7 +1116,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_title_display (&interface, &camera, boolarg)
+    if (VISCA_set_title_display (&iface, &camera, boolarg)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1086,7 +1128,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 2) || (intarg1 > 7)) {
       return 41;
     }
-    if (VISCA_set_zoom_tele_speed (&interface, &camera, intarg1)
+    if (VISCA_set_zoom_tele_speed (&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1097,7 +1139,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 2) || (intarg1 > 7)) {
       return 41;
     }
-    if (VISCA_set_zoom_wide_speed(&interface, &camera, intarg1)
+    if (VISCA_set_zoom_wide_speed(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1108,7 +1150,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 1023)) {
       return 41;
     }
-    if (VISCA_set_zoom_value(&interface, &camera, intarg1)!=VISCA_SUCCESS) {
+    if (VISCA_set_zoom_value(&iface, &camera, intarg1)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -1119,7 +1161,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 1023)) {
       return 41;
     }
-    if (VISCA_set_focus_far_speed(&interface, &camera, intarg1)
+    if (VISCA_set_focus_far_speed(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1132,7 +1174,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 1023)) {
       return 41;
     }
-    if (VISCA_set_focus_near_speed(&interface, &camera, intarg1)
+    if (VISCA_set_focus_near_speed(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1144,7 +1186,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 1000) || (intarg1 > 40959)) {
       return 41;
     }
-    if (VISCA_set_focus_value(&interface, &camera, intarg1)!=VISCA_SUCCESS) {
+    if (VISCA_set_focus_value(&iface, &camera, intarg1)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -1155,7 +1197,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 1)) {
       return 41;
     }
-    if (VISCA_set_focus_near_limit(&interface, &camera, intarg1) 
+    if (VISCA_set_focus_near_limit(&iface, &camera, intarg1) 
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1167,7 +1209,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 3)) {
       return 41;
     }
-    if (VISCA_set_whitebal_mode(&interface, &camera, intarg1)!=VISCA_SUCCESS){
+    if (VISCA_set_whitebal_mode(&iface, &camera, intarg1)!=VISCA_SUCCESS){
       return 46;
     }
     return 10;
@@ -1178,7 +1220,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 1)) {
       return 41;
     }
-    if (VISCA_set_rgain_value(&interface, &camera, intarg1)!=VISCA_SUCCESS) {
+    if (VISCA_set_rgain_value(&iface, &camera, intarg1)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -1190,7 +1232,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 1)) {
       return 41;
     }
-    if (VISCA_set_bgain_value(&interface, &camera, intarg1)!=VISCA_SUCCESS) {
+    if (VISCA_set_bgain_value(&iface, &camera, intarg1)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -1201,7 +1243,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 27)) {
       return 41;
     }
-    if (VISCA_set_shutter_value(&interface, &camera, intarg1)!=VISCA_SUCCESS){
+    if (VISCA_set_shutter_value(&iface, &camera, intarg1)!=VISCA_SUCCESS){
       return 46;
     }
     return 10;
@@ -1211,7 +1253,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 17)) {
       return 41;
     }
-    if (VISCA_set_iris_value(&interface, &camera, intarg1)!=VISCA_SUCCESS) {
+    if (VISCA_set_iris_value(&iface, &camera, intarg1)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -1221,7 +1263,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 1) || (intarg1 > 7)) {
       return 41;
     }
-    if (VISCA_set_gain_value(&interface, &camera, intarg1)!=VISCA_SUCCESS) {
+    if (VISCA_set_gain_value(&iface, &camera, intarg1)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -1232,7 +1274,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 1)) {
       return 41;
     }
-    if (VISCA_set_bright_value(&interface, &camera, intarg1)!=VISCA_SUCCESS) {
+    if (VISCA_set_bright_value(&iface, &camera, intarg1)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -1244,7 +1286,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 1)) {
       return 41;
     }
-    if (VISCA_set_aperture_value(&interface, &camera, intarg1)
+    if (VISCA_set_aperture_value(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1257,7 +1299,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 1)) {
       return 41;
     }
-    if (VISCA_set_exp_comp_value(&interface, &camera, intarg1)
+    if (VISCA_set_exp_comp_value(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1275,7 +1317,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
       return 41;
     }
 
-    if (VISCA_set_auto_exp_mode(&interface, &camera, intarg1)!=VISCA_SUCCESS){
+    if (VISCA_set_auto_exp_mode(&iface, &camera, intarg1)!=VISCA_SUCCESS){
       return 46;
     }
     return 10;
@@ -1286,7 +1328,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 1)) {
       return 41;
     }
-    if (VISCA_set_wide_mode(&interface, &camera, intarg1)!=VISCA_SUCCESS) {
+    if (VISCA_set_wide_mode(&iface, &camera, intarg1)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -1298,7 +1340,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 1)) {
       return 41;
     }
-    if (VISCA_set_picture_effect(&interface, &camera, intarg1)
+    if (VISCA_set_picture_effect(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1311,7 +1353,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 1)) {
       return 41;
     }
-    if (VISCA_set_digital_effect(&interface, &camera, intarg1)
+    if (VISCA_set_digital_effect(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1324,7 +1366,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 1)) {
       return 41;
     }
-    if (VISCA_set_digital_effect_level(&interface, &camera, intarg1)
+    if (VISCA_set_digital_effect_level(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1336,7 +1378,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 5)) {
       return 41;
     }
-    if (VISCA_memory_set(&interface, &camera, intarg1)!=VISCA_SUCCESS) {
+    if (VISCA_memory_set(&iface, &camera, intarg1)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -1346,7 +1388,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 5)) {
       return 41;
     }
-    if (VISCA_memory_recall(&interface, &camera, intarg1)!=VISCA_SUCCESS) {
+    if (VISCA_memory_recall(&iface, &camera, intarg1)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -1356,7 +1398,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 5)) {
       return 41;
     }
-    if (VISCA_memory_reset(&interface, &camera, intarg1)!=VISCA_SUCCESS) {
+    if (VISCA_memory_reset(&iface, &camera, intarg1)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -1370,7 +1412,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg2 == NULL) || (intarg2 < 1000) || (intarg2 > 40959)) {
       return 42;
     }
-    if (VISCA_set_zoom_and_focus_value(&interface, &camera, intarg1, intarg2)
+    if (VISCA_set_zoom_and_focus_value(&iface, &camera, intarg1, intarg2)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1385,7 +1427,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg2 == NULL) || (intarg2 < 1) || (intarg2 > 20)) {
       return 42;
     }
-    if (VISCA_set_pantilt_up(&interface, &camera, intarg1, intarg2)
+    if (VISCA_set_pantilt_up(&iface, &camera, intarg1, intarg2)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1399,7 +1441,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg2 == NULL) || (intarg2 < 1) || (intarg2 > 20)) {
       return 42;
     }
-    if (VISCA_set_pantilt_down(&interface, &camera, intarg1, intarg2)
+    if (VISCA_set_pantilt_down(&iface, &camera, intarg1, intarg2)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1413,7 +1455,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg2 == NULL) || (intarg2 < 1) || (intarg2 > 20)) {
       return 42;
     }
-    if (VISCA_set_pantilt_left(&interface, &camera, intarg1, intarg2)
+    if (VISCA_set_pantilt_left(&iface, &camera, intarg1, intarg2)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1427,7 +1469,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg2 == NULL) || (intarg2 < 1) || (intarg2 > 20)) {
       return 42;
     }
-    if (VISCA_set_pantilt_right(&interface, &camera, intarg1, intarg2)
+    if (VISCA_set_pantilt_right(&iface, &camera, intarg1, intarg2)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1441,7 +1483,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg2 == NULL) || (intarg2 < 1) || (intarg2 > 20)) {
       return 42;
     }
-    if (VISCA_set_pantilt_upleft(&interface, &camera, intarg1, intarg2)
+    if (VISCA_set_pantilt_upleft(&iface, &camera, intarg1, intarg2)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1455,7 +1497,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg2 == NULL) || (intarg2 < 1) || (intarg2 > 20)) {
       return 42;
     }
-    if (VISCA_set_pantilt_upright(&interface, &camera, intarg1, intarg2)
+    if (VISCA_set_pantilt_upright(&iface, &camera, intarg1, intarg2)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1469,7 +1511,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg2 == NULL) || (intarg2 < 1) || (intarg2 > 20)) {
       return 42;
     }
-    if (VISCA_set_pantilt_downleft(&interface, &camera, intarg1, intarg2)
+    if (VISCA_set_pantilt_downleft(&iface, &camera, intarg1, intarg2)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1483,7 +1525,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg2 == NULL) || (intarg2 < 1) || (intarg2 > 20)) {
       return 42;
     }
-    if (VISCA_set_pantilt_downright(&interface, &camera, intarg1, intarg2)
+    if (VISCA_set_pantilt_downright(&iface, &camera, intarg1, intarg2)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1497,7 +1539,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg2 == NULL) || (intarg2 < 1) || (intarg2 > 20)) {
       return 42;
     }
-    if (VISCA_set_pantilt_stop(&interface, &camera, intarg1, intarg2)
+    if (VISCA_set_pantilt_stop(&iface, &camera, intarg1, intarg2)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1511,7 +1553,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg2 == NULL) || (intarg2 < -299) || (intarg2 > 300)) {
       return 42;
     }
-    if (VISCA_set_pantilt_limit_upright(&interface, &camera, 
+    if (VISCA_set_pantilt_limit_upright(&iface, &camera, 
         intarg1, intarg2) != VISCA_SUCCESS) {
       return 46;
     }
@@ -1525,7 +1567,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg2 == NULL) || (intarg2 < -299) || (intarg2 > 300)) {
       return 42;
     }
-    if (VISCA_set_pantilt_limit_downleft(&interface, &camera, 
+    if (VISCA_set_pantilt_limit_downleft(&iface, &camera, 
         intarg1, intarg2) != VISCA_SUCCESS) {
       return 46;
     }
@@ -1545,7 +1587,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg4 == NULL) || (intarg4 < -299) || (intarg4 > 300)) {
       return 44;
     }
-    if (VISCA_set_pantilt_absolute_position(&interface, &camera, 
+    if (VISCA_set_pantilt_absolute_position(&iface, &camera, 
         intarg1, intarg2, intarg3, intarg4) != VISCA_SUCCESS) {
       return 46;
     }
@@ -1565,7 +1607,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg4 == NULL) || (intarg4 < -299) || (intarg4 > 300)) {
       return 44;
     }
-    if (VISCA_set_pantilt_relative_position(&interface, &camera, 
+    if (VISCA_set_pantilt_relative_position(&iface, &camera, 
         intarg1, intarg2, intarg3, intarg4) != VISCA_SUCCESS) {
       return 46;
     }
@@ -1592,7 +1634,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     temptitle->hposition=intarg2;
     temptitle->color=intarg3;
     temptitle->blink=intarg4;
-    if (VISCA_set_title_params(&interface, &camera, temptitle) 
+    if (VISCA_set_title_params(&iface, &camera, temptitle) 
         != VISCA_SUCCESS) {
       free(temptitle);
       return 46;
@@ -1619,7 +1661,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg5 == NULL) || (intarg5 < 1) || (intarg5 > 59)) {
       return 45;
     }
-    if (VISCA_set_date_time(&interface, &camera, 
+    if (VISCA_set_date_time(&iface, &camera, 
         intarg1, intarg2, intarg3, intarg4, intarg5) != VISCA_SUCCESS) {
       return 46;
     }
@@ -1650,7 +1692,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     temptitle->color=intarg3;
     temptitle->blink=intarg4;
     strncpy((char*)temptitle->title, arg5, 19);
-    if (VISCA_set_title_params(&interface, &camera, temptitle) 
+    if (VISCA_set_title_params(&iface, &camera, temptitle) 
         != VISCA_SUCCESS) {
       free(temptitle);
       return 46;
@@ -1661,7 +1703,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 #endif
 
   if (strcmp(command, "get_power") == 0) {
-    if (VISCA_get_power(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_power(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     if (value8 == 2) {
@@ -1675,7 +1717,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_power") == 0) {
-    if (VISCA_get_power(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_power(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     if (value8 == 2) {
@@ -1690,7 +1732,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_dzoom") == 0) {
-    if (VISCA_get_dzoom(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_dzoom(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -1699,7 +1741,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 #endif
 
   if (strcmp(command, "get_focus_auto") == 0) {
-    if (VISCA_get_focus_auto(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_focus_auto(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     if (value8 == 2) {
@@ -1714,7 +1756,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_exp_comp_power") == 0) {
-    if (VISCA_get_exp_comp_power(&interface, &camera, &value8)
+    if (VISCA_get_exp_comp_power(&iface, &camera, &value8)
         != VISCA_SUCCESS){
       return 46;
     }
@@ -1724,7 +1766,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 #endif
 
   if (strcmp(command, "get_backlight_comp") == 0) {
-    if (VISCA_get_backlight_comp(&interface, &camera, &value8)
+    if (VISCA_get_backlight_comp(&iface, &camera, &value8)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1740,7 +1782,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_zero_lux_shot") == 0) {
-    if (VISCA_get_zero_lux_shot(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_zero_lux_shot(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -1750,7 +1792,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_ir_led") == 0) {
-    if (VISCA_get_ir_led(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_ir_led(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -1760,7 +1802,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_mirror") == 0) {
-    if (VISCA_get_mirror(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_mirror(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -1770,7 +1812,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_freeze") == 0) {
-    if (VISCA_get_freeze(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_freeze(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -1780,7 +1822,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_display") == 0) {
-    if (VISCA_get_display(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_display(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -1789,7 +1831,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 #endif
 
   if (strcmp(command, "get_datascreen") == 0) {
-    if (VISCA_get_datascreen(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_datascreen(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     if (value8 == 2) {
@@ -1803,7 +1845,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_zoom_value") == 0) {
-    if (VISCA_get_zoom_value(&interface, &camera, &value16)!=VISCA_SUCCESS) {
+    if (VISCA_get_zoom_value(&iface, &camera, &value16)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value16;
@@ -1811,7 +1853,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_focus_value") == 0) {
-    if (VISCA_get_focus_value(&interface, &camera, &value16)!=VISCA_SUCCESS) {
+    if (VISCA_get_focus_value(&iface, &camera, &value16)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value16;
@@ -1820,7 +1862,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_focus_auto_sense") == 0) {
-    if (VISCA_get_focus_auto_sense(&interface, &camera, &value8)
+    if (VISCA_get_focus_auto_sense(&iface, &camera, &value8)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1831,7 +1873,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_focus_near_limit") == 0) {
-    if (VISCA_get_focus_near_limit(&interface, &camera, &value16)
+    if (VISCA_get_focus_near_limit(&iface, &camera, &value16)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1841,7 +1883,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 #endif
 
   if (strcmp(command, "get_whitebal_mode") == 0) {
-    if (VISCA_get_whitebal_mode(&interface, &camera, &value8)!=VISCA_SUCCESS){
+    if (VISCA_get_whitebal_mode(&iface, &camera, &value8)!=VISCA_SUCCESS){
       return 46;
     }
     *ret1 = value8;
@@ -1850,7 +1892,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_rgain_value") == 0) {
-    if (VISCA_get_rgain_value(&interface, &camera, &value16)!=VISCA_SUCCESS) {
+    if (VISCA_get_rgain_value(&iface, &camera, &value16)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value16;
@@ -1860,7 +1902,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_bgain_value") == 0) {
-    if (VISCA_get_bgain_value(&interface, &camera, &value16)!=VISCA_SUCCESS) {
+    if (VISCA_get_bgain_value(&iface, &camera, &value16)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value16;
@@ -1869,7 +1911,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 #endif
 
   if (strcmp(command, "get_auto_exp_mode") == 0) {
-    if (VISCA_get_auto_exp_mode(&interface, &camera, &value8)!=VISCA_SUCCESS){
+    if (VISCA_get_auto_exp_mode(&iface, &camera, &value8)!=VISCA_SUCCESS){
       return 46;
     }
     *ret1 = value8;
@@ -1878,7 +1920,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_slow_shutter_auto") == 0) {
-    if (VISCA_get_slow_shutter_auto(&interface, &camera, &value8)
+    if (VISCA_get_slow_shutter_auto(&iface, &camera, &value8)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1888,7 +1930,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 #endif
 
   if (strcmp(command, "get_shutter_value") == 0) {
-    if (VISCA_get_shutter_value(&interface, &camera, &value16)
+    if (VISCA_get_shutter_value(&iface, &camera, &value16)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1897,7 +1939,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_iris_value") == 0) {
-    if (VISCA_get_iris_value(&interface, &camera, &value16)!=VISCA_SUCCESS) {
+    if (VISCA_get_iris_value(&iface, &camera, &value16)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value16;
@@ -1905,7 +1947,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_gain_value") == 0) {
-    if (VISCA_get_gain_value(&interface, &camera, &value16)!=VISCA_SUCCESS) {
+    if (VISCA_get_gain_value(&iface, &camera, &value16)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value16;
@@ -1914,7 +1956,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_bright_value") == 0) {
-    if (VISCA_get_bright_value(&interface, &camera, &value16)!=VISCA_SUCCESS){
+    if (VISCA_get_bright_value(&iface, &camera, &value16)!=VISCA_SUCCESS){
       return 46;
     }
     *ret1 = value16;
@@ -1924,7 +1966,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_exp_comp_value") == 0) {
-    if (VISCA_get_exp_comp_value(&interface, &camera, &value16)
+    if (VISCA_get_exp_comp_value(&iface, &camera, &value16)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1935,7 +1977,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_aperture_value") == 0) {
-    if (VISCA_get_aperture_value(&interface, &camera, &value16)
+    if (VISCA_get_aperture_value(&iface, &camera, &value16)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1946,7 +1988,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_wide_mode") == 0) {
-    if (VISCA_get_wide_mode(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_wide_mode(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -1956,7 +1998,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_picture_effect") == 0) {
-    if (VISCA_get_picture_effect(&interface, &camera, &value8)
+    if (VISCA_get_picture_effect(&iface, &camera, &value8)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1967,7 +2009,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_digital_effect") == 0) {
-    if (VISCA_get_digital_effect(&interface, &camera, &value8)
+    if (VISCA_get_digital_effect(&iface, &camera, &value8)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1978,7 +2020,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 
 #if !D30ONLY
   if (strcmp(command, "get_digital_effect_level") == 0) {
-    if (VISCA_get_digital_effect_level(&interface, &camera, &value16)
+    if (VISCA_get_digital_effect_level(&iface, &camera, &value16)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -1988,7 +2030,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
 #endif
 
   if (strcmp(command, "get_memory") == 0) {
-    if (VISCA_get_memory(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_memory(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -1996,7 +2038,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_id") == 0) {
-    if (VISCA_get_id(&interface, &camera, &value16)!=VISCA_SUCCESS) {
+    if (VISCA_get_id(&iface, &camera, &value16)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value16;
@@ -2004,7 +2046,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_videosystem") == 0) {
-    if (VISCA_get_videosystem(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_videosystem(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -2012,7 +2054,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_pantilt_mode") == 0) {
-    if (VISCA_get_pantilt_mode(&interface, &camera, &value16)!=VISCA_SUCCESS){
+    if (VISCA_get_pantilt_mode(&iface, &camera, &value16)!=VISCA_SUCCESS){
       return 46;
     }
     *ret1 = value16;
@@ -2020,7 +2062,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_pantilt_maxspeed") == 0) {
-    if (VISCA_get_pantilt_maxspeed(&interface, &camera, &value8, &value8b)
+    if (VISCA_get_pantilt_maxspeed(&iface, &camera, &value8, &value8b)
         != VISCA_SUCCESS){
       return 46;
     }
@@ -2030,7 +2072,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_pantilt_position") == 0) {
-    if (VISCA_get_pantilt_position(&interface, &camera, ret1, ret2)
+    if (VISCA_get_pantilt_position(&iface, &camera, ret1, ret2)
         != VISCA_SUCCESS){
       return 46;
     }
@@ -2038,28 +2080,28 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "set_at_mode_onoff") == 0) {
-    if (VISCA_set_at_mode_onoff(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_at_mode_onoff(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_at_ae_onoff") == 0) {
-    if (VISCA_set_at_ae_onoff(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_at_ae_onoff(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_at_autozoom_onoff") == 0) {
-    if (VISCA_set_at_autozoom_onoff(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_at_autozoom_onoff(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_atmd_framedisplay_onoff") == 0) {
-    if (VISCA_set_atmd_framedisplay_onoff(&interface, &camera)
+    if (VISCA_set_atmd_framedisplay_onoff(&iface, &camera)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -2067,70 +2109,70 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "set_at_frameoffset_onoff") == 0) {
-    if (VISCA_set_at_frameoffset_onoff(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_at_frameoffset_onoff(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_atmd_startstop") == 0) {
-    if (VISCA_set_atmd_startstop(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_atmd_startstop(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_at_chase_next") == 0) {
-    if (VISCA_set_at_chase_next(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_at_chase_next(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_md_mode_onoff") == 0) {
-    if (VISCA_set_md_mode_onoff(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_md_mode_onoff(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_md_frame") == 0) {
-    if (VISCA_set_md_frame(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_md_frame(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_md_detect") == 0) {
-    if (VISCA_set_md_detect(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_md_detect(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_at_lostinfo") == 0) {
-    if (VISCA_set_at_lostinfo(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_at_lostinfo(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_md_lostinfo") == 0) {
-    if (VISCA_set_md_lostinfo(&interface, &camera)!=VISCA_SUCCESS) {
+    if (VISCA_set_md_lostinfo(&iface, &camera)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_md_measure_mode1_onoff") == 0) {
-    if (VISCA_set_md_measure_mode1_onoff(&interface, &camera)!=VISCA_SUCCESS){
+    if (VISCA_set_md_measure_mode1_onoff(&iface, &camera)!=VISCA_SUCCESS){
       return 46;
     }
     return 10;
   }
 
   if (strcmp(command, "set_md_measure_mode2_onoff") == 0) {
-    if (VISCA_set_md_measure_mode2_onoff(&interface, &camera)!=VISCA_SUCCESS){
+    if (VISCA_set_md_measure_mode2_onoff(&iface, &camera)!=VISCA_SUCCESS){
       return 46;
     }
     return 10;
@@ -2140,7 +2182,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_focus_auto (&interface, &camera, boolarg)!=VISCA_SUCCESS) {
+    if (VISCA_set_focus_auto (&iface, &camera, boolarg)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -2150,7 +2192,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_at_mode(&interface, &camera, boolarg)!=VISCA_SUCCESS) {
+    if (VISCA_set_at_mode(&iface, &camera, boolarg)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -2161,7 +2203,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_at_ae(&interface, &camera, boolarg)!=VISCA_SUCCESS) {
+    if (VISCA_set_at_ae(&iface, &camera, boolarg)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -2172,7 +2214,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_at_autozoom(&interface, &camera, boolarg)!=VISCA_SUCCESS){
+    if (VISCA_set_at_autozoom(&iface, &camera, boolarg)!=VISCA_SUCCESS){
       return 46;
     }
     return 10;
@@ -2182,7 +2224,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_atmd_framedisplay(&interface, &camera, boolarg)
+    if (VISCA_set_atmd_framedisplay(&iface, &camera, boolarg)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -2193,7 +2235,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_at_frameoffset(&interface, &camera, boolarg)
+    if (VISCA_set_at_frameoffset(&iface, &camera, boolarg)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -2204,7 +2246,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_md_mode(&interface, &camera, boolarg)!=VISCA_SUCCESS) {
+    if (VISCA_set_md_mode(&iface, &camera, boolarg)!=VISCA_SUCCESS) {
       return 46;
     }
     return 10;
@@ -2214,7 +2256,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_md_measure_mode1(&interface, &camera, boolarg)
+    if (VISCA_set_md_measure_mode1(&iface, &camera, boolarg)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -2225,7 +2267,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (boolarg == -1)) {
       return 41;
     }
-    if (VISCA_set_md_measure_mode2(&interface, &camera, boolarg)
+    if (VISCA_set_md_measure_mode2(&iface, &camera, boolarg)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -2236,7 +2278,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 7)) {
       return 41;
     }
-    if (VISCA_set_wide_con_lens(&interface, &camera, intarg1)
+    if (VISCA_set_wide_con_lens(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -2247,7 +2289,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 2)) {
       return 41;
     }
-    if (VISCA_set_at_chase(&interface, &camera, intarg1)
+    if (VISCA_set_at_chase(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -2258,7 +2300,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 3)) {
       return 41;
     }
-    if (VISCA_set_at_entry(&interface, &camera, intarg1)
+    if (VISCA_set_at_entry(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -2269,7 +2311,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 15)) {
       return 41;
     }
-    if (VISCA_set_md_adjust_ylevel(&interface, &camera, intarg1)
+    if (VISCA_set_md_adjust_ylevel(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -2280,7 +2322,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 15)) {
       return 41;
     }
-    if (VISCA_set_md_adjust_huelevel(&interface, &camera, intarg1)
+    if (VISCA_set_md_adjust_huelevel(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -2291,7 +2333,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 15)) {
       return 41;
     }
-    if (VISCA_set_md_adjust_size(&interface, &camera, intarg1)
+    if (VISCA_set_md_adjust_size(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -2302,7 +2344,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 15)) {
       return 41;
     }
-    if (VISCA_set_md_adjust_disptime(&interface, &camera, intarg1)
+    if (VISCA_set_md_adjust_disptime(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -2313,7 +2355,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 2)) {
       return 41;
     }
-    if (VISCA_set_md_adjust_refmode(&interface, &camera, intarg1)
+    if (VISCA_set_md_adjust_refmode(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -2324,7 +2366,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
     if ((arg1 == NULL) || (intarg1 < 0) || (intarg1 > 15)) {
       return 41;
     }
-    if (VISCA_set_md_adjust_reftime(&interface, &camera, intarg1)
+    if (VISCA_set_md_adjust_reftime(&iface, &camera, intarg1)
         != VISCA_SUCCESS) {
       return 46;
     }
@@ -2332,7 +2374,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_keylock") == 0) {
-    if (VISCA_get_keylock(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_keylock(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     if (value8 == 0) {
@@ -2346,7 +2388,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_wide_con_lens") == 0) {
-    if (VISCA_get_wide_con_lens(&interface, &camera, &value8)!=VISCA_SUCCESS){
+    if (VISCA_get_wide_con_lens(&iface, &camera, &value8)!=VISCA_SUCCESS){
       return 46;
     }
     *ret1 = value8;
@@ -2354,7 +2396,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_atmd_mode") == 0) {
-    if (VISCA_get_atmd_mode(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_atmd_mode(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -2362,7 +2404,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_at_mode") == 0) {
-    if (VISCA_get_at_mode(&interface, &camera, &value16)!=VISCA_SUCCESS) {
+    if (VISCA_get_at_mode(&iface, &camera, &value16)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value16;
@@ -2370,7 +2412,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_at_entry") == 0) {
-    if (VISCA_get_at_entry(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_at_entry(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -2378,7 +2420,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_md_mode") == 0) {
-    if (VISCA_get_md_mode(&interface, &camera, &value16)!=VISCA_SUCCESS) {
+    if (VISCA_get_md_mode(&iface, &camera, &value16)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value16;
@@ -2386,7 +2428,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_md_ylevel") == 0) {
-    if (VISCA_get_md_ylevel(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_md_ylevel(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -2394,7 +2436,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_md_huelevel") == 0) {
-    if (VISCA_get_md_huelevel(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_md_huelevel(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -2402,7 +2444,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_md_size") == 0) {
-    if (VISCA_get_md_size(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_md_size(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -2410,7 +2452,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_md_disptime") == 0) {
-    if (VISCA_get_md_disptime(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_md_disptime(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -2418,7 +2460,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_md_refmode") == 0) {
-    if (VISCA_get_md_refmode(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_md_refmode(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -2426,7 +2468,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_md_reftime") == 0) {
-    if (VISCA_get_md_reftime(&interface, &camera, &value8)!=VISCA_SUCCESS) {
+    if (VISCA_get_md_reftime(&iface, &camera, &value8)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -2434,7 +2476,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_at_obj_pos") == 0) {
-    if (VISCA_get_at_obj_pos(&interface, &camera, &value8, &value8b, &value8c)!=VISCA_SUCCESS) {
+    if (VISCA_get_at_obj_pos(&iface, &camera, &value8, &value8b, &value8c)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -2444,7 +2486,7 @@ int doCommand(char *commandline, int *ret1, int *ret2, int *ret3) {
   }
 
   if (strcmp(command, "get_md_obj_pos") == 0) {
-    if (VISCA_get_md_obj_pos(&interface, &camera, &value8, &value8b, &value8c)!=VISCA_SUCCESS) {
+    if (VISCA_get_md_obj_pos(&iface, &camera, &value8, &value8b, &value8c)!=VISCA_SUCCESS) {
       return 46;
     }
     *ret1 = value8;
@@ -2513,927 +2555,3 @@ int main(int argc, char **argv) {
   close_interface();
   exit(0);
 }
-
-/************/
-/*libvisca.c*/
-/************/
-
-/******************************/
-/*special functions for D30/31*/
-/******************************/
-
-/*
-unsigned int
-VISCA_set_wide_con_lens(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x26);
-  _VISCA_append_byte(&packet, 0x00);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_at_mode_onoff(VISCAInterface_t *interface, VISCACamera_t *camera)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x01);
-  _VISCA_append_byte(&packet, 0x10);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_at_mode(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x01);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_at_ae_onoff(VISCAInterface_t *interface, VISCACamera_t *camera)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x02);
-  _VISCA_append_byte(&packet, 0x10);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_at_ae(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x02);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_at_autozoom_onoff(VISCAInterface_t *interface, VISCACamera_t *camera)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x03);
-  _VISCA_append_byte(&packet, 0x10);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_at_autozoom(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x03);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_atmd_framedisplay_onoff(VISCAInterface_t *interface, VISCACamera_t *camera)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x04);
-  _VISCA_append_byte(&packet, 0x10);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_atmd_framedisplay(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x04);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_at_frameoffset_onoff(VISCAInterface_t *interface, VISCACamera_t *camera)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x05);
-  _VISCA_append_byte(&packet, 0x10);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_at_frameoffset(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x05);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_atmd_startstop(VISCAInterface_t *interface, VISCACamera_t *camera)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x06);
-  _VISCA_append_byte(&packet, 0x10);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_at_chase(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x07);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-unsigned int
-VISCA_set_at_chase_next(VISCAInterface_t *interface, VISCACamera_t *camera)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x07);
-  _VISCA_append_byte(&packet, 0x10);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_md_mode_onoff(VISCAInterface_t *interface, VISCACamera_t *camera)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x08);
-  _VISCA_append_byte(&packet, 0x10);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_md_mode(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x08);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_md_frame(VISCAInterface_t *interface, VISCACamera_t *camera)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x09);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_md_detect(VISCAInterface_t *interface, VISCACamera_t *camera)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x0A);
-  _VISCA_append_byte(&packet, 0x10);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_at_entry(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x15);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_at_lostinfo(VISCAInterface_t *interface, VISCACamera_t *camera)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_PAN_TILTER);
-  _VISCA_append_byte(&packet, 0x20);
-  _VISCA_append_byte(&packet, 0x07);
-  _VISCA_append_byte(&packet, 0x20);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_md_lostinfo(VISCAInterface_t *interface, VISCACamera_t *camera)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_PAN_TILTER);
-  _VISCA_append_byte(&packet, 0x20);
-  _VISCA_append_byte(&packet, 0x07);
-  _VISCA_append_byte(&packet, 0x21);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_md_adjust_ylevel(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x0B);
-  _VISCA_append_byte(&packet, 0x00);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_md_adjust_huelevel(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x0C);
-  _VISCA_append_byte(&packet, 0x00);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_md_adjust_size(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x0D);
-  _VISCA_append_byte(&packet, 0x00);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_md_adjust_disptime(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x0F);
-  _VISCA_append_byte(&packet, 0x00);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_md_adjust_refmode(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x10);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_md_adjust_reftime(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x0B);
-  _VISCA_append_byte(&packet, 0x00);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_md_measure_mode1_onoff(VISCAInterface_t *interface, VISCACamera_t *camera)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x27);
-  _VISCA_append_byte(&packet, 0x10);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_md_measure_mode1(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x27);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_md_measure_mode2_onoff(VISCAInterface_t *interface, VISCACamera_t *camera)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x28);
-  _VISCA_append_byte(&packet, 0x10);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_set_md_measure_mode2(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power)
-{
-  VISCAPacket_t packet;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_COMMAND);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x28);
-  _VISCA_append_byte(&packet, power);
-
-  return _VISCA_send_packet_with_reply(interface, camera, &packet);
-}
-
-
-unsigned int
-VISCA_get_keylock(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power)
-{
-  VISCAPacket_t packet;
-  unsigned int err;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_INQUIRY);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA1);
-  _VISCA_append_byte(&packet, VISCA_KEYLOCK);
-  err=_VISCA_send_packet_with_reply(interface, camera, &packet);
-  if (err!=VISCA_SUCCESS)
-    return err;
-  else
-    {
-      *power=interface->ibuf[2];
-      return VISCA_SUCCESS;
-    }
-}
-
-
-unsigned int
-VISCA_get_wide_con_lens(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power)
-{
-  VISCAPacket_t packet;
-  unsigned int err;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_INQUIRY);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA1);
-  _VISCA_append_byte(&packet, 0x26);
-  err=_VISCA_send_packet_with_reply(interface, camera, &packet);
-  if (err!=VISCA_SUCCESS)
-    return err;
-  else
-    {
-      *power=(interface->ibuf[3] & 0x0f);
-      return VISCA_SUCCESS;
-    }
-}
-
-
-unsigned int
-VISCA_get_atmd_mode(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power)
-{
-  VISCAPacket_t packet;
-  unsigned int err;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_INQUIRY);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x22);
-  err=_VISCA_send_packet_with_reply(interface, camera, &packet);
-  if (err!=VISCA_SUCCESS)
-    return err;
-  else
-    {
-      *power=interface->ibuf[2];
-      return VISCA_SUCCESS;
-    }
-}
-
-
-unsigned int
-VISCA_get_at_mode(VISCAInterface_t *interface, VISCACamera_t *camera, UInt16_t *value)
-{
-  VISCAPacket_t packet;
-  unsigned int err;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_INQUIRY);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x23);
-  err=_VISCA_send_packet_with_reply(interface, camera, &packet);
-  if (err!=VISCA_SUCCESS)
-    return err;
-  else
-    {
-      *value=((interface->ibuf[2] & 0xff) << 8) + (interface->ibuf[3] & 0xff);
-      return VISCA_SUCCESS;
-    }
-}
-
-
-unsigned int
-VISCA_get_at_entry(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power)
-{
-  VISCAPacket_t packet;
-  unsigned int err;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_INQUIRY);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x15);
-  err=_VISCA_send_packet_with_reply(interface, camera, &packet);
-  if (err!=VISCA_SUCCESS)
-    return err;
-  else
-    {
-      *power=interface->ibuf[2];
-      return VISCA_SUCCESS;
-    }
-}
-
-
-unsigned int
-VISCA_get_md_mode(VISCAInterface_t *interface, VISCACamera_t *camera, UInt16_t *value)
-{
-  VISCAPacket_t packet;
-  unsigned int err;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_INQUIRY);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x24);
-  err=_VISCA_send_packet_with_reply(interface, camera, &packet);
-  if (err!=VISCA_SUCCESS)
-    return err;
-  else
-    {
-      *value=((interface->ibuf[2] & 0xff) << 8) + (interface->ibuf[3] & 0xff);
-      return VISCA_SUCCESS;
-    }
-}
-
-
-unsigned int
-VISCA_get_md_ylevel(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power)
-{
-  VISCAPacket_t packet;
-  unsigned int err;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_INQUIRY);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x0B);
-  err=_VISCA_send_packet_with_reply(interface, camera, &packet);
-  if (err!=VISCA_SUCCESS)
-    return err;
-  else
-    {
-      *power=(interface->ibuf[3] & 0x0f);
-      return VISCA_SUCCESS;
-    }
-}
-
-
-unsigned int
-VISCA_get_md_huelevel(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power)
-{
-  VISCAPacket_t packet;
-  unsigned int err;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_INQUIRY);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x0C);
-  err=_VISCA_send_packet_with_reply(interface, camera, &packet);
-  if (err!=VISCA_SUCCESS)
-    return err;
-  else
-    {
-      *power=(interface->ibuf[3] & 0x0f);
-      return VISCA_SUCCESS;
-    }
-}
-
-
-unsigned int
-VISCA_get_md_size(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power)
-{
-  VISCAPacket_t packet;
-  unsigned int err;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_INQUIRY);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x0D);
-  err=_VISCA_send_packet_with_reply(interface, camera, &packet);
-  if (err!=VISCA_SUCCESS)
-    return err;
-  else
-    {
-      *power=(interface->ibuf[3] & 0x0f);
-      return VISCA_SUCCESS;
-    }
-}
-
-
-unsigned int
-VISCA_get_md_disptime(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power)
-{
-  VISCAPacket_t packet;
-  unsigned int err;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_INQUIRY);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x0F);
-  err=_VISCA_send_packet_with_reply(interface, camera, &packet);
-  if (err!=VISCA_SUCCESS)
-    return err;
-  else
-    {
-      *power=(interface->ibuf[3] & 0x0f);
-      return VISCA_SUCCESS;
-    }
-}
-
-
-unsigned int
-VISCA_get_md_refmode(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power)
-{
-  VISCAPacket_t packet;
-  unsigned int err;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_INQUIRY);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x10);
-  err=_VISCA_send_packet_with_reply(interface, camera, &packet);
-  if (err!=VISCA_SUCCESS)
-    return err;
-  else
-    {
-      *power=interface->ibuf[2];
-      return VISCA_SUCCESS;
-    }
-}
-
-
-unsigned int
-VISCA_get_md_reftime(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power)
-{
-  VISCAPacket_t packet;
-  unsigned int err;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_INQUIRY);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x11);
-  err=_VISCA_send_packet_with_reply(interface, camera, &packet);
-  if (err!=VISCA_SUCCESS)
-    return err;
-  else
-    {
-      *power=(interface->ibuf[3] & 0x0f);
-      return VISCA_SUCCESS;
-    }
-}
-
-
-
-unsigned int
-VISCA_get_at_obj_pos(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *xpos, UInt8_t *ypos, UInt8_t *status)
-{
-  VISCAPacket_t packet;
-  unsigned int err;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_INQUIRY);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x20);
-  err=_VISCA_send_packet_with_reply(interface, camera, &packet);
-  if (err!=VISCA_SUCCESS)
-    return err;
-  else
-    {
-      *xpos=interface->ibuf[2];
-      *ypos=interface->ibuf[3];
-      *status=(interface->ibuf[4] & 0x0f);
-      return VISCA_SUCCESS;
-    }
-}
-
-unsigned int
-VISCA_get_md_obj_pos(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *xpos, UInt8_t *ypos, UInt8_t *status)
-{
-  VISCAPacket_t packet;
-  unsigned int err;
-
-  _VISCA_init_packet(&packet);
-  _VISCA_append_byte(&packet, VISCA_INQUIRY);
-  _VISCA_append_byte(&packet, VISCA_CATEGORY_CAMERA2);
-  _VISCA_append_byte(&packet, 0x21);
-  err=_VISCA_send_packet_with_reply(interface, camera, &packet);
-  if (err!=VISCA_SUCCESS)
-    return err;
-  else
-    {
-      *xpos=interface->ibuf[2];
-      *ypos=interface->ibuf[3];
-      *status=(interface->ibuf[4] & 0x0f);
-      return VISCA_SUCCESS;
-    }
-}
-*/
-
-/*************/
-/*libvisca.h:*/
-/*************/
-
-/******************************/
-/*special functions for D30/31*/
-/******************************/
-
-/*
-unsigned int
-VISCA_set_wide_con_lens(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_set_at_mode_onoff(VISCAInterface_t *interface, VISCACamera_t *camera);
-
-unsigned int
-VISCA_set_at_mode(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_set_at_ae_onoff(VISCAInterface_t *interface, VISCACamera_t *camera);
-
-unsigned int
-VISCA_set_at_ae(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_set_at_autozoom_onoff(VISCAInterface_t *interface, VISCACamera_t *camera);
-
-unsigned int
-VISCA_set_at_autozoom(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_set_atmd_framedisplay_onoff(VISCAInterface_t *interface, VISCACamera_t *camera);
-
-unsigned int
-VISCA_set_atmd_framedisplay(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_set_at_frameoffset_onoff(VISCAInterface_t *interface, VISCACamera_t *camera);
-
-unsigned int
-VISCA_set_at_frameoffset(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_set_atmd_startstop(VISCAInterface_t *interface, VISCACamera_t *camera);
-
-unsigned int
-VISCA_set_at_chase(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_set_at_chase_next(VISCAInterface_t *interface, VISCACamera_t *camera);
-
-unsigned int
-VISCA_set_md_mode_onoff(VISCAInterface_t *interface, VISCACamera_t *camera);
-
-unsigned int
-VISCA_set_md_mode(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_set_md_frame(VISCAInterface_t *interface, VISCACamera_t *camera);
-
-unsigned int
-VISCA_set_md_detect(VISCAInterface_t *interface, VISCACamera_t *camera);
-
-unsigned int
-VISCA_set_at_entry(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_set_at_lostinfo(VISCAInterface_t *interface, VISCACamera_t *camera);
-
-unsigned int
-VISCA_set_md_lostinfo(VISCAInterface_t *interface, VISCACamera_t *camera);
-
-unsigned int
-VISCA_set_md_adjust_ylevel(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_set_md_adjust_huelevel(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_set_md_adjust_size(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_set_md_adjust_disptime(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_set_md_adjust_refmode(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_set_md_adjust_reftime(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_set_md_measure_mode1_onoff(VISCAInterface_t *interface, VISCACamera_t *camera);
-
-unsigned int
-VISCA_set_md_measure_mode1(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_set_md_measure_mode2_onoff(VISCAInterface_t *interface, VISCACamera_t *camera);
-
-unsigned int
-VISCA_set_md_measure_mode2(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t power);
-
-unsigned int
-VISCA_get_keylock(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power);
-
-unsigned int
-VISCA_get_wide_con_lens(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power);
-
-unsigned int
-VISCA_get_atmd_mode(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power);
-
-unsigned int
-VISCA_get_at_mode(VISCAInterface_t *interface, VISCACamera_t *camera, UInt16_t *value);
-
-unsigned int
-VISCA_get_at_entry(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power);
-
-unsigned int
-VISCA_get_md_mode(VISCAInterface_t *interface, VISCACamera_t *camera, UInt16_t *value);
-
-unsigned int
-VISCA_get_md_ylevel(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power);
-
-unsigned int
-VISCA_get_md_huelevel(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power);
-
-unsigned int
-VISCA_get_md_size(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power);
-
-unsigned int
-VISCA_get_md_disptime(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power);
-
-unsigned int
-VISCA_get_md_refmode(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power);
-
-unsigned int
-VISCA_get_md_reftime(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *power);
-
-unsigned int
-VISCA_get_at_obj_pos(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *xpos, UInt8_t *ypos, UInt8_t *status);
-
-unsigned int
-VISCA_get_md_obj_pos(VISCAInterface_t *interface, VISCACamera_t *camera, UInt8_t *xpos, UInt8_t *ypos, UInt8_t *status);
-
-*/
