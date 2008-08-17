@@ -2,6 +2,9 @@ libVISCA, (c) 2002-2008 Damien Douxchamps <http://damien.douxchamps.net/>
 
 2008-08-17 Damien Douxchamps
 
+   SVN 15: update changelog
+   SVN 14: remove CVS files in VC2005
+   SVN 13: remove unecessary files in VC2005
    SVN 12: lots of changes and additions to reach the 1.1.0 version we had
 	   before we moved to SVN.
    SVN 11: remove more useless files
