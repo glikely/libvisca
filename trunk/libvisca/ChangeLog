@@ -1,5 +1,9 @@
-libVISCA, (c) 2002-2007 Damien Douxchamps <douxchamps@ieee.org>
+libVISCA, (c) 2002-2008 Damien Douxchamps <http://damien.douxchamps.net/>
 
+2008-08-17 Damien Douxchamps
+
+   SVN 09: move the src/ directory to visca/
+	
 2008-08-02 Damien Douxchamps
 
    SVN 08: patch from Bastian Pfeging for RS232 input options.

@@ -348,7 +348,7 @@ get_md_obj_pos (returns the center position of the detection frame divided
 #include <sys/ioctl.h>
 #include <string.h>
 
-#include "../src/libvisca.h"
+#include "../visca/libvisca.h"
 
 #define DEBUG 0
 

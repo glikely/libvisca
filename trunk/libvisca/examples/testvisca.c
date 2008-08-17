@@ -27,7 +27,7 @@
 #include <termios.h> /* POSIX terminal control definitions */
 #include <sys/ioctl.h>
 
-#include "../src/libvisca.h"
+#include "../visca/libvisca.h"
 
 #define EVI_D30
 
