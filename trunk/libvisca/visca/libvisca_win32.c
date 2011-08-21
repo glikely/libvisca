@@ -19,13 +19,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <Windows.h>
-#include <crtdbg.h>
+#include "libvisca.h"
 
+#include <windows.h>
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
-#include "libvisca.h"
 
 /* implemented in libvisca.c
  */
@@ -226,7 +225,6 @@ VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
       return VISCA_FAILURE;
   }
   // =========================================
- 
 
   // If all of these API's were successful then the port is ready for use.
   iface->port_fd = m_hCom;
@@ -235,6 +233,13 @@ VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
   return VISCA_SUCCESS;
 }
 
+uint32_t
+VISCA_unread_bytes(VISCAInterface_t *iface, unsigned char *buffer, uint32_t *buffer_size)
+{
+  // TODO
+  *buffer_size = 0;
+  return VISCA_SUCCESS;
+}
 
 uint32_t
 VISCA_close_serial(VISCAInterface_t *iface)
@@ -248,3 +253,12 @@ VISCA_close_serial(VISCAInterface_t *iface)
   else
     return VISCA_FAILURE;
 }
+
+uint32_t
+VISCA_usleep(uint32_t useconds)
+{
+  uint32_t microsecs = useconds / 1000;
+  Sleep (microsecs);
+  return 0;
+}
+

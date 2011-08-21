@@ -19,17 +19,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-
+#include "libvisca.h"
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <termios.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
-#include <libvisca.h>
-
-
-
 
 /* implemented in libvisca.c
  */
@@ -52,7 +47,7 @@ unsigned int _VISCA_send_packet_with_reply(VISCAInterface_t *iface, VISCACamera_
  */
 
 
-unsigned int
+uint32_t
 _VISCA_write_packet_data(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet)
 {
     int err;
@@ -66,7 +61,7 @@ _VISCA_write_packet_data(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPa
 
 
 
-unsigned int
+uint32_t
 _VISCA_send_packet(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet)
 {
     // check data:
@@ -97,7 +92,7 @@ _VISCA_send_packet(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t
 }
 
 
-unsigned int
+uint32_t
 _VISCA_get_packet(VISCAInterface_t *iface)
 {
     int pos=0;
@@ -128,7 +123,7 @@ _VISCA_get_packet(VISCAInterface_t *iface)
 /*       SYSTEM  FUNCTIONS         */
 /***********************************/
 
-unsigned int
+uint32_t
 VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 {
   int fd;
@@ -179,8 +174,24 @@ VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
   return VISCA_SUCCESS;
 }
 
+uint32_t
+VISCA_unread_bytes(VISCAInterface_t *iface, unsigned char *buffer, uint32_t *buffer_size)
+{
+  uint32_t bytes = 0;
+  *buffer_size = 0;
 
-unsigned int
+  ioctl(iface->port_fd, FIONREAD, &bytes);
+  if (bytes>0)
+    {
+      bytes = (bytes>*buffer_size) ? *buffer_size : bytes;
+      read(iface->port_fd, &buffer, bytes);
+      *buffer_size = bytes;
+      return VISCA_FAILURE;
+    }
+  return VISCA_SUCCESS;
+}
+
+uint32_t
 VISCA_close_serial(VISCAInterface_t *iface)
 {
   if (iface->port_fd!=-1)
@@ -191,4 +202,10 @@ VISCA_close_serial(VISCAInterface_t *iface)
     }
   else
     return VISCA_FAILURE;
+}
+
+uint32_t
+VISCA_usleep(uint32_t useconds)
+{
+  return (uint32_t) usleep(useconds);
 }
