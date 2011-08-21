@@ -16,7 +16,7 @@ AC_TYPE_SIZE_T
 AC_FUNC_MMAP
 
 # set the libtool shared library version numbers
-lt_major=2
+lt_major=3
 lt_revision=0
 lt_age=0
 
