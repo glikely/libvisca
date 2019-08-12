@@ -1,9 +1,9 @@
 # process this file with autoconf to get a configure script
-AC_INIT([visca/libvisca.c])
-
-AM_INIT_AUTOMAKE(libvisca, 1.1.0)
-AM_CONFIG_HEADER(config.h)
+AC_INIT(libvisca, 1.1.1)
 AC_CONFIG_SRCDIR([visca/libvisca.c])
+AM_INIT_AUTOMAKE
+
+AM_CONFIG_HEADER(config.h)
 
 AC_PROG_CC
 AC_PROG_LIBTOOL
@@ -15,9 +15,17 @@ AC_TYPE_SIZE_T
 
 AC_FUNC_MMAP
 
-# set the libtool shared library version numbers
+dnl ---------------------------------------------------------------------------
+dnl When making a release:
+dnl  1. If the library source code has changed at all since the last release,
+dnl     then increment REVISION.
+dnl  2. If the interface (ABI) has been modified since the last release,
+dnl     increment MAJOR, and set REVISION to 0.
+dnl  3. If the interface changes consist solely of additions, increment AGE.
+dnl  4. If the interface has removed or changed elements, set AGE to 0.
+dnl ---------------------------------------------------------------------------
 lt_major=3
-lt_revision=0
+lt_revision=1
 lt_age=0
 
 AC_SUBST(lt_major)
