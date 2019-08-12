@@ -353,6 +353,10 @@ get_md_obj_pos (returns the center position of the detection frame divided
 /*The device the camera is attached to*/
 /*The default device the camera is attached to*/
 #ifdef VISCA_WIN
+/**
+ * Before the test, you need to know your camera is connected with which COM port
+ * In my test environment, it is COM4
+ */
 char *ttydev = "COM1:";
 #else
  char *ttydev = "/dev/ttyS0";
@@ -378,7 +382,7 @@ char *process_commandline(int argc, char **argv) {
   int i;
 
   /*temporarily used to hold the length of a string*/
-  int length = 0;
+  size_t length = 0;
   
   /*used to hold the commandline that is returned*/
   char *commandline;

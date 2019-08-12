@@ -1,26 +1,61 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 9.00
-# Visual C++ Express 2005
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libvisca", "libvisca.vcproj", "{279DADCF-F9B4-4351-973B-439E8715C35B}"
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.572
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libvisca", "libvisca.vcxproj", "{279DADCF-F9B4-4351-973B-439E8715C35B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "visca_cli", "visca_cli.vcproj", "{4CD46905-117E-43F5-B52E-EFD3E914A380}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "visca_cli", "visca_cli.vcxproj", "{4CD46905-117E-43F5-B52E-EFD3E914A380}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		dynamic debug|Win32 = dynamic debug|Win32
+		dynamic debug|x64 = dynamic debug|x64
+		dynamic release|Win32 = dynamic release|Win32
+		dynamic release|x64 = dynamic release|x64
 		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{279DADCF-F9B4-4351-973B-439E8715C35B}.Debug|Win32.ActiveCfg = Debug|Win32
 		{279DADCF-F9B4-4351-973B-439E8715C35B}.Debug|Win32.Build.0 = Debug|Win32
+		{279DADCF-F9B4-4351-973B-439E8715C35B}.Debug|x64.ActiveCfg = Debug|x64
+		{279DADCF-F9B4-4351-973B-439E8715C35B}.Debug|x64.Build.0 = Debug|x64
+		{279DADCF-F9B4-4351-973B-439E8715C35B}.dynamic debug|Win32.ActiveCfg = dynamic debug|Win32
+		{279DADCF-F9B4-4351-973B-439E8715C35B}.dynamic debug|Win32.Build.0 = dynamic debug|Win32
+		{279DADCF-F9B4-4351-973B-439E8715C35B}.dynamic debug|x64.ActiveCfg = dynamic debug|x64
+		{279DADCF-F9B4-4351-973B-439E8715C35B}.dynamic debug|x64.Build.0 = dynamic debug|x64
+		{279DADCF-F9B4-4351-973B-439E8715C35B}.dynamic release|Win32.ActiveCfg = dynamic release|Win32
+		{279DADCF-F9B4-4351-973B-439E8715C35B}.dynamic release|Win32.Build.0 = dynamic release|Win32
+		{279DADCF-F9B4-4351-973B-439E8715C35B}.dynamic release|x64.ActiveCfg = dynamic release|x64
+		{279DADCF-F9B4-4351-973B-439E8715C35B}.dynamic release|x64.Build.0 = dynamic release|x64
 		{279DADCF-F9B4-4351-973B-439E8715C35B}.Release|Win32.ActiveCfg = Release|Win32
 		{279DADCF-F9B4-4351-973B-439E8715C35B}.Release|Win32.Build.0 = Release|Win32
+		{279DADCF-F9B4-4351-973B-439E8715C35B}.Release|x64.ActiveCfg = Release|x64
+		{279DADCF-F9B4-4351-973B-439E8715C35B}.Release|x64.Build.0 = Release|x64
 		{4CD46905-117E-43F5-B52E-EFD3E914A380}.Debug|Win32.ActiveCfg = Debug|Win32
 		{4CD46905-117E-43F5-B52E-EFD3E914A380}.Debug|Win32.Build.0 = Debug|Win32
+		{4CD46905-117E-43F5-B52E-EFD3E914A380}.Debug|x64.ActiveCfg = Debug|x64
+		{4CD46905-117E-43F5-B52E-EFD3E914A380}.Debug|x64.Build.0 = Debug|x64
+		{4CD46905-117E-43F5-B52E-EFD3E914A380}.dynamic debug|Win32.ActiveCfg = dynamic debug|Win32
+		{4CD46905-117E-43F5-B52E-EFD3E914A380}.dynamic debug|Win32.Build.0 = dynamic debug|Win32
+		{4CD46905-117E-43F5-B52E-EFD3E914A380}.dynamic debug|x64.ActiveCfg = dynamic debug|x64
+		{4CD46905-117E-43F5-B52E-EFD3E914A380}.dynamic debug|x64.Build.0 = dynamic debug|x64
+		{4CD46905-117E-43F5-B52E-EFD3E914A380}.dynamic release|Win32.ActiveCfg = dynamic release|Win32
+		{4CD46905-117E-43F5-B52E-EFD3E914A380}.dynamic release|Win32.Build.0 = dynamic release|Win32
+		{4CD46905-117E-43F5-B52E-EFD3E914A380}.dynamic release|x64.ActiveCfg = dynamic release|x64
+		{4CD46905-117E-43F5-B52E-EFD3E914A380}.dynamic release|x64.Build.0 = dynamic release|x64
 		{4CD46905-117E-43F5-B52E-EFD3E914A380}.Release|Win32.ActiveCfg = Release|Win32
 		{4CD46905-117E-43F5-B52E-EFD3E914A380}.Release|Win32.Build.0 = Release|Win32
+		{4CD46905-117E-43F5-B52E-EFD3E914A380}.Release|x64.ActiveCfg = Release|x64
+		{4CD46905-117E-43F5-B52E-EFD3E914A380}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5BC0D078-AB05-47DC-A90B-CDE5FB98D965}
 	EndGlobalSection
 EndGlobal
