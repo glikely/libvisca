@@ -1,0 +1,7 @@
+.deps/
+.libs/
+libvisca.la
+libvisca.o
+libvisca.lo
+libvisca_posix.lo
+libvisca_posix.o

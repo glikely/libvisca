@@ -1,0 +1,6 @@
+.deps/
+.libs/
+testvisca.o
+testvisca
+visca_cli
+visca_cli.o
