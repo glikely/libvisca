@@ -21,3 +21,31 @@ Comments, additional VISCA info, etc... are always welcome.
 Have fun,
 
 Damien
+
+Linux Build Instructions
+========================
+
+From release tarball
+--------------------
+
+Unpack the tarball and run ./configure and make:
+
+```
+tar xfz libvisca-1.1.1.tar.gz
+cd libvisca
+./configure
+make
+```
+
+From git repo
+-------------
+
+Use `autoreconf --install` to create configuation script before building:
+
+```
+git clone https://git.code.sf.net/p/libvisca/git libvisca
+cd libvisca
+autoreconf --install
+./configure
+make
+```
