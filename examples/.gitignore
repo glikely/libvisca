@@ -1,6 +1,6 @@
 .deps/
 .libs/
-testvisca.o
+*.o
 testvisca
 visca_cli
-visca_cli.o
+visca_info
