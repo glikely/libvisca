@@ -1,3 +1,4 @@
+INSTALL
 Makefile
 Makefile.in
 aclocal.m4
@@ -10,6 +11,7 @@ config.log
 config.status
 config.sub
 configure
+depcomp
 install-sh
 libtool
 ltmain.sh
