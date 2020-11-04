@@ -49,3 +49,21 @@ autoreconf --install
 ./configure
 make
 ```
+
+MinGW32 Build Instructions
+==========================
+
+Windows binaries can be built with the MinGW toolchain.
+Both native builds on Windows and cross-compiles from Linux should work.
+
+To cross compile from Linux, do the following:
+
+```
+git clone https://git.code.sf.net/p/libvisca/git libvisca
+cd libvisca
+autoreconf --install
+./configure --host=x86_64-w64-mingw32
+make
+```
+
+I haven't tried compiling natively on Windows yet.

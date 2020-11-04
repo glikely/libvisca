@@ -24,6 +24,7 @@ dnl     increment MAJOR, and set REVISION to 0.
 dnl  3. If the interface changes consist solely of additions, increment AGE.
 dnl  4. If the interface has removed or changed elements, set AGE to 0.
 dnl ---------------------------------------------------------------------------
+LT_INIT([win32-dll])
 lt_major=3
 lt_revision=1
 lt_age=0
@@ -31,6 +32,9 @@ lt_age=0
 AC_SUBST(lt_major)
 AC_SUBST(lt_revision)
 AC_SUBST(lt_age)
+
+AC_CANONICAL_HOST
+AM_CONDITIONAL([HOST_WIN32], [test x$host_os = xmingw32])
 
 pkgincludedir='$(includedir)/visca'
 AC_SUBST(pkgincludedir)
