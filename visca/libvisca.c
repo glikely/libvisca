@@ -51,6 +51,26 @@ _VISCA_init_packet(VISCAPacket_t *packet)
 }
 
 
+uint32_t
+_VISCA_get_packet(VISCAInterface_t *iface)
+{
+  int pos = 0;
+
+  // get octets one by one
+  for (pos = 0; pos < VISCA_INPUT_BUFFER_SIZE; pos++) {
+    if (_VISCA_get_byte(iface, &iface->ibuf[pos]) == VISCA_FAILURE)
+      break;
+
+    if (iface->ibuf[pos] == VISCA_TERMINATOR) {
+      iface->bytes = pos + 1;
+      return VISCA_SUCCESS;
+    }
+  }
+
+  return VISCA_FAILURE;
+}
+
+
 VISCA_API uint32_t
 _VISCA_get_reply(VISCAInterface_t *iface, VISCACamera_t *camera)
 {

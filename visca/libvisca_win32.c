@@ -71,6 +71,21 @@ _VISCA_write_packet_data(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPa
 }
 
 
+VISCA_API uint32_t
+_VISCA_get_byte(VISCAInterface_t *iface, unsigned char *buffer)
+{
+  BOOL  rc;
+  DWORD iBytesRead;
+
+  rc = ReadFile(iface->port_fd, buffer, 1, &iBytesRead, NULL);
+  if (!rc) {
+    _RPTF0(_CRT_WARN,"ReadFile failed.\n");
+    return VISCA_FAILURE;
+  }
+  return VISCA_SUCCESS;
+}
+
+
 uint32_t
 _VISCA_get_packet(VISCAInterface_t *iface)
 {

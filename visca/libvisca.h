@@ -470,6 +470,7 @@ typedef struct _VISCA_interface
 
 #include <termios.h>
 #include <stdint.h>
+#include <unistd.h>
 
 /* timeout in us */
 #define VISCA_SERIAL_WAIT              100000
@@ -556,6 +557,9 @@ _VISCA_send_packet(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t
 
 VISCA_API uint32_t
 _VISCA_get_packet(VISCAInterface_t *iface);
+
+VISCA_API uint32_t
+_VISCA_get_byte(VISCAInterface_t *iface, unsigned char *byte);
 
 VISCA_API uint32_t
 VISCA_open_serial(VISCAInterface_t *iface, const char *device_name);

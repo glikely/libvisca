@@ -43,47 +43,22 @@ _VISCA_write_packet_data(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPa
 }
 
 
-
-uint32_t
-_VISCA_get_packet(VISCAInterface_t *iface)
+VISCA_API uint32_t
+_VISCA_get_byte(VISCAInterface_t *iface, unsigned char *buffer)
 {
-    int pos=0;
     int curr;
 
-    // get octets one by one
+    // get one octet
     curr = v24Getc(iface->port_fd);
-    if ( curr<0 )
-    {
+    if (curr < 0) {
 #ifdef DEBUG
 	dbg_ReportStrP(PSTR("_VISCA_get_packet: timeout\n"));
 #endif	
 	return VISCA_FAILURE;
     }
-    iface->ibuf[pos]=(BYTE)curr;
-    while ( iface->ibuf[pos]!=VISCA_TERMINATOR )
-    {
-	if ( ++pos >= VISCA_INPUT_BUFFER_SIZE )
-	{
-#ifdef DEBUG
-	    dbg_ReportStrP(PSTR("_VISCA_get_packet: overflow\n"));
-#endif	
-	    return VISCA_FAILURE;
-	}
-	curr = v24Getc(iface->port_fd);
-	if ( curr<0 )
-	{
-#ifdef DEBUG
-	    dbg_ReportStrP(PSTR("_VISCA_get_packet: timeout\n"));
-#endif	
-	    return VISCA_FAILURE;
-	}
-	iface->ibuf[pos]=(BYTE)curr;
-    }
-    iface->bytes=pos+1;
-
+    *buffer = (BYTE)curr;
     return VISCA_SUCCESS;
 }
-
 
 
 /***********************************/
