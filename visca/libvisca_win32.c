@@ -38,7 +38,7 @@ unsigned int _VISCA_send_packet_with_reply(VISCAInterface_t *iface, VISCACamera_
  * be implemented here:
  *
  * unsigned int _VISCA_write_packet_data(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet);
- * unsigned int _VISCA_get_packet(VISCAInterface_t *iface);
+ * unsigned int _VISCA_get_byte(VISCAInterface_t *iface, unsigned char *buffer);
  * unsigned int VISCA_open_serial(VISCAInterface_t *iface, const char *device_name);
  * unsigned int VISCA_close_serial(VISCAInterface_t *iface);
  * 
@@ -71,43 +71,18 @@ _VISCA_write_packet_data(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPa
 
 
 uint32_t
-_VISCA_get_packet(VISCAInterface_t *iface)
+_VISCA_get_byte(VISCAInterface_t *iface, unsigned char *buffer)
 {
-  int pos=0;
   BOOL  rc;
   DWORD iBytesRead;
 
-  // wait for message
-  rc=ReadFile(iface->port_fd, iface->ibuf, 1, &iBytesRead, NULL);
-  if ( !rc || iBytesRead==0 )
-  {
-      // Obtain the error code
-      //m_lLastError = ::GetLastError();
-	  _RPTF0(_CRT_WARN,"ReadFile failed.\n");
-      return VISCA_FAILURE;
+  rc = ReadFile(iface->port_fd, buffer, 1, &iBytesRead, NULL);
+  if (!rc) {
+    _RPTF0(_CRT_WARN,"ReadFile failed.\n");
+    return VISCA_FAILURE;
   }
-  while (iface->ibuf[pos]!=VISCA_TERMINATOR) {
-    if ( ++pos >= VISCA_INPUT_BUFFER_SIZE )
-	{
-        // Obtain the error code
-        //m_lLastError = ::GetLastError();
-  	    _RPTF0(_CRT_WARN,"illegal reply packet.\n");
-        return VISCA_FAILURE;
-    }
-    rc=ReadFile(iface->port_fd, iface->ibuf + pos, 1, &iBytesRead, NULL);
-	if ( !rc || iBytesRead==0 )
-	{
-        // Obtain the error code
-        //m_lLastError = ::GetLastError();
-	  _RPTF0(_CRT_WARN,"ReadFile failed.\n");
-        return VISCA_FAILURE;
-    }
-  }
-  iface->bytes=pos+1;
-
   return VISCA_SUCCESS;
 }
-
 
 
 /***********************************/
