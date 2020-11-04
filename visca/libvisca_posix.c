@@ -60,38 +60,6 @@ _VISCA_write_packet_data(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPa
 }
 
 
-
-uint32_t
-_VISCA_send_packet(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet)
-{
-    // check data:
-    if ((iface->address>7)||(camera->address>7)||(iface->broadcast>1))
-    {
-#if DEBUG
-		fprintf(stderr,"(%s): Invalid header parameters\n",__FILE__);
-		fprintf(stderr," %d %d %d   \n",iface->address,camera->address,iface->broadcast);
-#endif
-		return VISCA_FAILURE;
-    }
-
-    // build header:
-    packet->bytes[0]=0x80;
-    packet->bytes[0]|=(iface->address << 4);
-    if (iface->broadcast>0)
-    {
-		packet->bytes[0]|=(iface->broadcast << 3);
-		packet->bytes[0]&=0xF8;
-    }
-    else
-		packet->bytes[0]|=camera->address;
-    
-    // append footer
-    _VISCA_append_byte(packet,VISCA_TERMINATOR);
-
-    return _VISCA_write_packet_data(iface,camera,packet);
-}
-
-
 uint32_t
 _VISCA_get_packet(VISCAInterface_t *iface)
 {

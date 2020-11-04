@@ -94,9 +94,36 @@ _VISCA_send_packet_with_reply(VISCAInterface_t *iface, VISCACamera_t *camera, VI
   if (_VISCA_get_reply(iface,camera)!=VISCA_SUCCESS)
     return VISCA_FAILURE;
 
-  return VISCA_SUCCESS;    
+  return VISCA_SUCCESS;
 }
 
+uint32_t
+_VISCA_send_packet(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet)
+{
+    // check data:
+    if ((iface->address>7)||(camera->address>7)||(iface->broadcast>1))
+    {
+      _VISCA_debug("(%s): Invalid header parameters\n", __FILE__);
+      _VISCA_debug(" %d %d %d   \n", iface->address, camera->address, iface->broadcast);
+      return VISCA_FAILURE;
+    }
+
+    // build header:
+    packet->bytes[0]=0x80;
+    packet->bytes[0]|=(iface->address << 4);
+    if (iface->broadcast>0)
+    {
+      packet->bytes[0]|=(iface->broadcast << 3);
+      packet->bytes[0]&=0xF8;
+    }
+    else
+      packet->bytes[0]|=camera->address;
+
+    // append footer
+    _VISCA_append_byte(packet,VISCA_TERMINATOR);
+
+    return _VISCA_write_packet_data(iface,camera,packet);
+}
 
 /****************************************************************************/
 /*                           PUBLIC FUNCTIONS                               */

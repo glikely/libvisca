@@ -49,50 +49,15 @@ uint32_t
 _VISCA_write_packet_data(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet)
 {
   DWORD iBytesWritten;
-  WriteFile(iface->port_fd, packet->bytes, packet->length, &iBytesWritten, NULL);
-  if ( iBytesWritten < packet->length )
-      return VISCA_FAILURE;
-  else
-      return VISCA_SUCCESS;
-}
-
-
-
-uint32_t
-_VISCA_send_packet(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet)
-{
-  DWORD iBytesWritten;
-  static long bytesTogether = 0;
   BOOL rVal = 0;
   DWORD errors;
   COMSTAT stat;
   int nTrials;
 
-  // check data:
-  if ((iface->address>7)||(camera->address>7)||(iface->broadcast>1))
-    {
-	  _RPTF3(_CRT_WARN,"Invalid header parameters %d %d %d\n",iface->address,camera->address,iface->broadcast);
-	  return VISCA_FAILURE;
-    }
-
-  // build header:
-  packet->bytes[0]=0x80;
-  packet->bytes[0]|=(iface->address << 4);
-  if (iface->broadcast>0)
-    {
-      packet->bytes[0]|=(iface->broadcast << 3);
-      packet->bytes[0]&=0xF8;
-    }
-  else
-    packet->bytes[0]|=camera->address;
-    
-  // append footer
-  _VISCA_append_byte(packet,VISCA_TERMINATOR);
-
   for (nTrials = 0; nTrials < 3 && rVal == 0; nTrials++) {
     if (nTrials > 0)
       ClearCommError(iface->port_fd, &errors, &stat);
-	rVal = WriteFile(iface->port_fd, &packet->bytes, packet->length, &iBytesWritten, NULL);
+        rVal = WriteFile(iface->port_fd, &packet->bytes, packet->length, &iBytesWritten, NULL);
   }
 
   if ( iBytesWritten < packet->length )
@@ -101,7 +66,6 @@ _VISCA_send_packet(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t
       return VISCA_FAILURE;
     }
   else {
-    bytesTogether += iBytesWritten;
     return VISCA_SUCCESS;
   }
 }
