@@ -38,6 +38,19 @@
 #  define VISCA_POSIX
 #endif
 
+#if DEBUG
+#  if defined(VISCA_WIN)
+#    define _VISCA_debug(msg, ...) _CrtDbgReport(_CRT_WARN, __FILE__, __LINE__, "libvisca", msg, __VA_ARGS__)
+#  elif defined (__AVR__)
+#    define _VISCA_debug(msg, ...) dbg_ReportStrP(PSTR(msg))
+#  else
+#    include <stdio.h>
+#    define _VISCA_debug(msg, ...) fprintf(stderr, msg, __VA_ARGS__);
+#  endif
+#else
+#  define _VISCA_debug(msg, ...) ;
+#endif
+
 /**********************/
 /* Message formatting */
 /**********************/
