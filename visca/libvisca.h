@@ -831,7 +831,11 @@ VISCA_API uint32_t
 VISCA_set_irreceive_onoff(VISCAInterface_t *iface, VISCACamera_t *camera);
 
 /*  pan_speed should be in the range 01 - 18.
-    tilt_speed should be in the range 01 - 14 */
+    tilt_speed should be in the range 01 - 14
+    Negative speeds are LEFT for pan, and DOWN for tilt */
+
+VISCA_API uint32_t
+VISCA_set_pantilt(VISCAInterface_t *iface, VISCACamera_t *camera, int pan_speed, int tilt_speed);
 
 VISCA_API uint32_t
 VISCA_set_pantilt_up(VISCAInterface_t *iface, VISCACamera_t *camera, uint32_t pan_speed, uint32_t tilt_speed);
