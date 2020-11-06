@@ -136,14 +136,13 @@ uint32_t
 VISCA_unread_bytes(VISCAInterface_t *iface, unsigned char *buffer, uint32_t *buffer_size)
 {
 	uint32_t bytes = 0;
-	int bytes_read;
 	*buffer_size = 0;
 
 	ioctl(iface->port_fd, FIONREAD, &bytes);
 	if (bytes>0)
     {
 		bytes = (bytes>*buffer_size) ? *buffer_size : bytes;
-		bytes_read=read(iface->port_fd, &buffer, bytes);
+		read(iface->port_fd, &buffer, bytes);
 		*buffer_size = bytes;
 		return VISCA_FAILURE;
     }
