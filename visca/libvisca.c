@@ -234,29 +234,23 @@ VISCA_API uint32_t
 VISCA_get_camera_info(VISCAInterface_t *iface, VISCACamera_t *camera)
 {
   VISCAPacket_t packet;
-  packet.bytes[0]=0x80 | camera->address;
-  packet.bytes[1]=0x09;
-  packet.bytes[2]=0x00;
-  packet.bytes[3]=0x02;
-  packet.bytes[4]=VISCA_TERMINATOR;
-  packet.length=5;
 
-  if (_VISCA_write_packet_data(iface, camera, &packet)!=VISCA_SUCCESS)
-    return VISCA_FAILURE;
-  else
-    if (_VISCA_get_reply(iface, camera)!=VISCA_SUCCESS)
-      return VISCA_FAILURE;
+  _VISCA_init_packet(&packet);
+  _VISCA_append_byte(&packet,0x09);
+  _VISCA_append_byte(&packet,0x00);
+  _VISCA_append_byte(&packet,0x02);
 
-  if (iface->bytes!= 10) /* we expect 10 bytes as answer */
+  if (_VISCA_send_packet_with_reply(iface, camera, &packet)!=VISCA_SUCCESS)
     return VISCA_FAILURE;
-  else
-    {
-      camera->vendor=(iface->ibuf[2]<<8) + iface->ibuf[3];
-      camera->model=(iface->ibuf[4]<<8) + iface->ibuf[5];
-      camera->rom_version=(iface->ibuf[6]<<8) + iface->ibuf[7];
-      camera->socket_num=iface->ibuf[8];
-      return VISCA_SUCCESS;
-    }
+
+  if (iface->bytes != 10) /* we expect 10 bytes as answer */
+    return VISCA_FAILURE;
+
+  camera->vendor=(iface->ibuf[2]<<8) + iface->ibuf[3];
+  camera->model=(iface->ibuf[4]<<8) + iface->ibuf[5];
+  camera->rom_version=(iface->ibuf[6]<<8) + iface->ibuf[7];
+  camera->socket_num=iface->ibuf[8];
+  return VISCA_SUCCESS;
 }
 
 /***********************************/
