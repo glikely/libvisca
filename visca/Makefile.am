@@ -4,6 +4,8 @@ lib_LTLIBRARIES = libvisca.la
 AM_CFLAGS = -I$(top_srcdir)
 EXTRA_DIST = libvisca_avr.c libvisca_win32.c
 
+pkgconfig_DATA = libvisca.pc
+
 libvisca_la_LDFLAGS = -no-undefined -version-info @lt_major@:@lt_revision@:@lt_age@
 
 libvisca_la_SOURCES = libvisca.c libvisca.h

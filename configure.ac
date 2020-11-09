@@ -3,6 +3,9 @@ AC_INIT(libvisca, 1.1.1)
 AC_CONFIG_SRCDIR([visca/libvisca.c])
 AM_INIT_AUTOMAKE
 
+PKG_PROG_PKG_CONFIG
+PKG_INSTALLDIR
+
 AM_CONFIG_HEADER(config.h)
 
 AC_PROG_CC
@@ -40,4 +43,5 @@ pkgincludedir='$(includedir)/visca'
 AC_SUBST(pkgincludedir)
 
 CFLAGS="$CFLAGS -Wall -Wunused"
+AC_CONFIG_FILES([visca/libvisca.pc:visca/libvisca.pc.in])
 AC_OUTPUT([ Makefile visca/Makefile examples/Makefile VC2005/Makefile])
