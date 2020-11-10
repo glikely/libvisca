@@ -1,0 +1,20 @@
+sudo: false
+dist: trusty
+cache:
+  apt: true
+git:
+  depth: false
+addons:
+  apt:
+    packages:
+    - build-essential
+    - mingw-w64
+script:
+- autoreconf --install
+- ./configure
+- make
+- make install
+- ./configure --host=x86_64-w64-mingw32
+- make
+- make install
+

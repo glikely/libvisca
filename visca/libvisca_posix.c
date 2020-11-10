@@ -107,7 +107,7 @@ VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 
 	/* Timeout parameters */
 	iface->options.c_cc[VMIN] = 0; /* Return immediately if any data available */
-	iface->options.c_cc[VTIME] = (1000 + 99) / 100; // VTIME is 1/10s
+	iface->options.c_cc[VTIME] = (2000 + 99) / 100; // VTIME is 1/10s
 
 	tcsetattr(fd, TCSANOW, &iface->options);
 
