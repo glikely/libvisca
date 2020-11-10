@@ -90,12 +90,10 @@ _VISCA_get_byte(VISCAInterface_t *iface, unsigned char *buffer)
 uint32_t
 VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 {
-	BOOL     m_bPortReady;
-	HANDLE   m_hCom;
 	DCB      m_dcb;
 	COMMTIMEOUTS cto;
 
-	m_hCom = CreateFile(device_name,
+	iface->port_fd = CreateFile(device_name,
 			    GENERIC_READ | GENERIC_WRITE,
 			    0, // exclusive access
 			    NULL, // no security
@@ -104,19 +102,25 @@ VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 			    NULL); // null template
 
 	// Check the returned handle for INVALID_HANDLE_VALUE and then set the buffer sizes.
-	if (m_hCom == INVALID_HANDLE_VALUE) {
-		_RPTF1(_CRT_WARN,"cannot open serial device %s\n",device_name);
-		iface->port_fd = NULL;
-		return VISCA_FAILURE;
+	if (iface->port_fd == INVALID_HANDLE_VALUE) {
+		_RPTF1(_CRT_WARN,"cannot open serial device %s\n", device_name);
+		goto err_setup;
 	}
 
-	m_bPortReady = SetupComm(m_hCom, 4, 4); // set buffer sizes
+	if (!SetupComm(iface->port_fd, 4, 4)) { // set buffer sizes
+		_RPTF1(_CRT_WARN,"SetupComm() failed on device %s\n", device_name);
+		goto err_setup;
+	}
 
 	// Port settings are specified in a Data Communication Block (DCB). The
 	// easiest way to initialize a DCB is to call GetCommState to fill in
 	// its default values, override the values that you want to change and
 	// then call SetCommState to set the values.
-	m_bPortReady = GetCommState(m_hCom, &m_dcb);
+	if (!GetCommState(iface->port_fd, &m_dcb)) {
+		_RPTF1(_CRT_WARN,"GetCommState() failed on device %s\n", device_name);
+		goto err_setup;
+	}
+
 	m_dcb.BaudRate = 9600;
 	m_dcb.ByteSize = 8;
 	m_dcb.Parity = NOPARITY;
@@ -135,36 +139,38 @@ VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 	m_dcb.fErrorChar = FALSE;
 	m_dcb.fNull = FALSE;
 
-	m_bPortReady = SetCommState(m_hCom, &m_dcb);
+	if (!SetCommState(iface->port_fd, &m_dcb)) {
+		_RPTF1(_CRT_WARN,"GetCommState() failed on device %s\n", device_name);
+		goto err_setup;
+	}
 
 	// =========================================
 	// (jd) set timeout
-	if (!GetCommTimeouts(m_hCom,&cto)) {
+	if (!GetCommTimeouts(iface->port_fd,&cto)) {
 		// Obtain the error code
 		//m_lLastError = ::GetLastError();
 		_RPTF0(_CRT_WARN,"unable to obtain timeout information\n");
-		CloseHandle(m_hCom);
-		return VISCA_FAILURE;
+		goto err_setup;
 	}
 	cto.ReadIntervalTimeout = 100;		     /* 20ms would be good, but 100 are for usb-rs232 */
 	cto.ReadTotalTimeoutConstant = 2000;	     /* 2s  */
 	cto.ReadTotalTimeoutMultiplier = 50;	     /* 50ms for each char */
 	cto.WriteTotalTimeoutMultiplier = 500;
 	cto.WriteTotalTimeoutConstant = 1000;
-	if (!SetCommTimeouts(m_hCom,&cto)) {
-		// Obtain the error code
-		//m_lLastError = ::GetLastError();
+	if (!SetCommTimeouts(iface->port_fd,&cto)) {
 		_RPTF0(_CRT_WARN,"unable to setup timeout information\n");
-		CloseHandle(m_hCom);
-		return VISCA_FAILURE;
+		goto err_setup;
 	}
 
 	// =========================================
 	// If all of these API's were successful then the port is ready for use.
-	iface->port_fd = m_hCom;
 	iface->address = 0;
 
 	return VISCA_SUCCESS;
+
+ err_setup:
+	VISCA_close_serial(iface);
+	return VISCA_FAILURE;
 }
 
 uint32_t
