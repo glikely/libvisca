@@ -1,6 +1,6 @@
 /*
  * VISCA(tm) Camera Control Library
- * Copyright (C) 2002 Damien Douxchamps 
+ * Copyright (C) 2002 Damien Douxchamps
  *
  * Written by Damien Douxchamps <ddouxchamps@users.sf.net>
  *
@@ -21,7 +21,6 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
-
 #include <string.h>
 #include <errno.h>
 
@@ -31,37 +30,32 @@
 #include "debugging.h"
 #include "libvisca.h"
 
-
 uint32_t
 _VISCA_write_packet_data(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet)
 {
-    int i;
+	int i;
 
-    for ( i=0; i<packet->length; ++i )
-    {
-	v24Putc(iface->port_fd, packet->bytes[i]);
-    }
-    return VISCA_SUCCESS;
+	for (i = 0; i < packet->length; ++i)
+		v24Putc(iface->port_fd, packet->bytes[i]);
+	return VISCA_SUCCESS;
 }
-
 
 uint32_t
 _VISCA_get_byte(VISCAInterface_t *iface, unsigned char *buffer)
 {
-    int curr;
+	int curr;
 
-    // get one octet
-    curr = v24Getc(iface->port_fd);
-    if (curr < 0) {
+	// get one octet
+	curr = v24Getc(iface->port_fd);
+	if (curr < 0) {
 #ifdef DEBUG
-	dbg_ReportStrP(PSTR("_VISCA_get_packet: timeout\n"));
-#endif	
-	return VISCA_FAILURE;
-    }
-    *buffer = (BYTE)curr;
-    return VISCA_SUCCESS;
+		dbg_ReportStrP(PSTR("_VISCA_get_packet: timeout\n"));
+#endif
+		return VISCA_FAILURE;
+	}
+	*buffer = (BYTE)curr;
+	return VISCA_SUCCESS;
 }
-
 
 /***********************************/
 /*       SYSTEM  FUNCTIONS         */
@@ -70,58 +64,54 @@ _VISCA_get_byte(VISCAInterface_t *iface, unsigned char *buffer)
 uint32_t
 VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 {
-    /* Hey, this is a microcontroller. We don't have UART device names. ;-)
-     *
-     * The used already opened
-     */
-    if ( !iface || !device_name )
-    {
+	/* Hey, this is a microcontroller. We don't have UART device names. ;-)
+	 *
+	 * The used already opened
+	 */
+	if (!iface || !device_name) {
 #ifdef DEBUG
-	dbg_ReportStrP(PSTR("VISCA_open_serial: bad parms\n"));
+		dbg_ReportStrP(PSTR("VISCA_open_serial: bad parms\n"));
 #endif
-	return VISCA_FAILURE;
-    }
+		return VISCA_FAILURE;
+	}
 
-    iface->port_fd = UART_VISCA;
-    iface->address=0;
+	iface->port_fd = UART_VISCA;
+	iface->address = 0;
 
-    return VISCA_SUCCESS;
+	return VISCA_SUCCESS;
 }
 
 uint32_t
 VISCA_unread_bytes(VISCAInterface_t *iface, unsigned char *buffer, uint32_t *buffer_size)
 {
-  // TODO
-  *buffer_size = 0;
-  return VISCA_SUCCESS;
+	// TODO
+	*buffer_size = 0;
+	return VISCA_SUCCESS;
 }
 
 uint32_t
 VISCA_close_serial(VISCAInterface_t *iface)
 {
-    if ( !iface )
-    {
+	if (!iface) {
 #ifdef DEBUG
-	dbg_ReportStrP(PSTR("_VISCA_close_serial: bad header parms\n"));
+		dbg_ReportStrP(PSTR("_VISCA_close_serial: bad header parms\n"));
 #endif
-	return VISCA_FAILURE;
-    }
-    if (iface->port_fd!=0xFF)
-    {
+		return VISCA_FAILURE;
+	}
 
-	/* Hey, this is a microcontroller. The port must be closed outside this
-	 * function call.
-	 */
-	iface->port_fd = 0xFF;
-	return VISCA_SUCCESS;
-    }
-    else
+	if (iface->port_fd != 0xFF) {
+		/* Hey, this is a microcontroller. The port must be closed outside this
+		 * function call.
+		 */
+		iface->port_fd = 0xFF;
+		return VISCA_SUCCESS;
+	}
 	return VISCA_FAILURE;
 }
 
 uint32_t
 VISCA_usleep(uint32_t useconds)
 {
-  return (uint32_t) usleep(useconds);
+	return (uint32_t) usleep(useconds);
 }
 

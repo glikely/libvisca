@@ -1,6 +1,6 @@
 /*
  * VISCA(tm) Camera Control Library
- * Copyright (C) 2002 Damien Douxchamps 
+ * Copyright (C) 2002 Damien Douxchamps
  *
  * Written by Damien Douxchamps <ddouxchamps@users.sf.net>
  *
@@ -28,14 +28,11 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 
-/* implemented in libvisca.c
- */
+/* implemented in libvisca.c */
 void _VISCA_append_byte(VISCAPacket_t *packet, unsigned char byte);
 void _VISCA_init_packet(VISCAPacket_t *packet);
 unsigned int _VISCA_get_reply(VISCAInterface_t *iface, VISCACamera_t *camera);
 unsigned int _VISCA_send_packet_with_reply(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet);
-
-
 
 /* Implementation of the platform specific code. The following functions must
  * be implemented here:
@@ -44,40 +41,35 @@ unsigned int _VISCA_send_packet_with_reply(VISCAInterface_t *iface, VISCACamera_
  * unsigned int _VISCA_get_byte(VISCAInterface_t *iface, unsigned char *buffer);
  * unsigned int VISCA_open_serial(VISCAInterface_t *iface, const char *device_name);
  * unsigned int VISCA_close_serial(VISCAInterface_t *iface);
- * 
+ *
  */
-
 
 uint32_t
 _VISCA_write_packet_data(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet)
 {
-    int err;
+	int err;
 
-    err = write(iface->port_fd, packet->bytes, packet->length);
-    if ( err < packet->length )
+	err = write(iface->port_fd, packet->bytes, packet->length);
+	if ( err < packet->length )
 		return VISCA_FAILURE;
-    else
-		return VISCA_SUCCESS;
+	return VISCA_SUCCESS;
 }
-
 
 uint32_t
 _VISCA_get_byte(VISCAInterface_t *iface, unsigned char *byte)
 {
-    int waiting = 0;
+	int waiting = 0;
 
-    // wait for message
-    ioctl(iface->port_fd, FIONREAD, &waiting);
-    while (waiting == 0) {
-        usleep(0);
-        ioctl(iface->port_fd, FIONREAD, &waiting);
-    }
+	// wait for message
+	ioctl(iface->port_fd, FIONREAD, &waiting);
+	while (waiting == 0) {
+		usleep(0);
+		ioctl(iface->port_fd, FIONREAD, &waiting);
+	}
 
-    // get one octets
-    return (read(iface->port_fd, byte, 1) == 1) ? VISCA_SUCCESS : VISCA_FAILURE;
+	// get one octets
+	return (read(iface->port_fd, byte, 1) == 1) ? VISCA_SUCCESS : VISCA_FAILURE;
 }
-
-
 
 /***********************************/
 /*       SYSTEM  FUNCTIONS         */
@@ -89,45 +81,42 @@ VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 	int fd;
 	fd = open(device_name, O_RDWR | O_NDELAY | O_NOCTTY);
 
-	if (fd == -1)
-    {
+	if (fd == -1) {
 #if DEBUG
 		fprintf(stderr,"(%s): cannot open serial device %s\n",__FILE__,device_name);
 #endif
 		iface->port_fd=-1;
 		return VISCA_FAILURE;
-    }	
-	else
-    {
-		fcntl(fd, F_SETFL,0);
-		/* Setting port parameters */
-		tcgetattr(fd, &iface->options);
+	}
 
-		/* control flags */
-		cfsetispeed(&iface->options,B9600);    /* 9600 Bds   */
-		iface->options.c_cflag &= ~PARENB;     /* No parity  */
-		iface->options.c_cflag &= ~CSTOPB;     /*            */
-		iface->options.c_cflag &= ~CSIZE;      /* 8bit       */
-		iface->options.c_cflag |= CS8;         /*            */
-		iface->options.c_cflag &= ~CRTSCTS;    /* No hdw ctl */
+	fcntl(fd, F_SETFL,0);
+	/* Setting port parameters */
+	tcgetattr(fd, &iface->options);
 
-		/* local flags */
-		iface->options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); /* raw input */
+	/* control flags */
+	cfsetispeed(&iface->options,B9600);    /* 9600 Bds   */
+	iface->options.c_cflag &= ~PARENB;     /* No parity  */
+	iface->options.c_cflag &= ~CSTOPB;     /*            */
+	iface->options.c_cflag &= ~CSIZE;      /* 8bit       */
+	iface->options.c_cflag |= CS8;         /*            */
+	iface->options.c_cflag &= ~CRTSCTS;    /* No hdw ctl */
 
-		/* input flags */
-		/*
-		  iface->options.c_iflag &= ~(INPCK | ISTRIP); // no parity
-		  iface->options.c_iflag &= ~(IXON | IXOFF | IXANY); // no soft ctl
-		*/
-		/* patch: bpflegin: set to 0 in order to avoid invalid pan/tilt return values */
-		iface->options.c_iflag = 0;
+	/* local flags */
+	iface->options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); /* raw input */
 
-		/* output flags */
-		iface->options.c_oflag &= ~OPOST; /* raw output */
+	/* input flags
+	 *
+	 * iface->options.c_iflag &= ~(INPCK | ISTRIP); // no parity
+	 * iface->options.c_iflag &= ~(IXON | IXOFF | IXANY); // no soft ctl
+	 */
+	/* patch: bpflegin: set to 0 in order to avoid invalid pan/tilt return values */
+	iface->options.c_iflag = 0;
 
-		tcsetattr(fd, TCSANOW, &iface->options);
+	/* output flags */
+	iface->options.c_oflag &= ~OPOST; /* raw output */
 
-    }
+	tcsetattr(fd, TCSANOW, &iface->options);
+
 	iface->port_fd = fd;
 	iface->address=0;
 
@@ -141,27 +130,24 @@ VISCA_unread_bytes(VISCAInterface_t *iface, unsigned char *buffer, uint32_t *buf
 	*buffer_size = 0;
 
 	ioctl(iface->port_fd, FIONREAD, &bytes);
-	if (bytes>0)
-    {
+	if (bytes > 0) {
 		bytes = (bytes>*buffer_size) ? *buffer_size : bytes;
 		read(iface->port_fd, &buffer, bytes);
 		*buffer_size = bytes;
 		return VISCA_FAILURE;
-    }
+	}
 	return VISCA_SUCCESS;
 }
 
 uint32_t
 VISCA_close_serial(VISCAInterface_t *iface)
 {
-	if (iface->port_fd!=-1)
-    {
+	if (iface->port_fd != -1) {
 		close(iface->port_fd);
 		iface->port_fd = -1;
 		return VISCA_SUCCESS;
-    }
-	else
-		return VISCA_FAILURE;
+	}
+	return VISCA_FAILURE;
 }
 
 uint32_t
