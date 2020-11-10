@@ -3,7 +3,7 @@
  * Copyright (C) 2020 Grant Likely <grant.likely@secretlab.ca>
  * Copyright (C) 2002 Damien Douxchamps <douxchamps@ieee.org>
  *
- * SPDX-License-Identifier: GPLv2+
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "../visca/libvisca.h"
