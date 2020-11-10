@@ -152,9 +152,13 @@ VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 		_RPTF0(_CRT_WARN,"unable to obtain timeout information\n");
 		goto err_setup;
 	}
-	cto.ReadIntervalTimeout = 100;		     /* 20ms would be good, but 100 are for usb-rs232 */
-	cto.ReadTotalTimeoutConstant = 2000;	     /* 2s  */
-	cto.ReadTotalTimeoutMultiplier = 50;	     /* 50ms for each char */
+
+	/* Setting interval and multiplier to 0 ensures received bytes are
+	 * returned immediately, but ReadFile() call will wait up to
+	 * 2 seconds for bytes to arrive if the buffer is empty */
+	cto.ReadIntervalTimeout = 0;
+	cto.ReadTotalTimeoutConstant = 2000;
+	cto.ReadTotalTimeoutMultiplier = 0;
 	cto.WriteTotalTimeoutMultiplier = 500;
 	cto.WriteTotalTimeoutConstant = 1000;
 	if (!SetCommTimeouts(iface->port_fd,&cto)) {

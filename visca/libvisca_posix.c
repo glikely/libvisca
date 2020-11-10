@@ -58,16 +58,6 @@ _VISCA_write_packet_data(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPa
 uint32_t
 _VISCA_get_byte(VISCAInterface_t *iface, unsigned char *byte)
 {
-	int waiting = 0;
-
-	// wait for message
-	ioctl(iface->port_fd, FIONREAD, &waiting);
-	while (waiting == 0) {
-		usleep(0);
-		ioctl(iface->port_fd, FIONREAD, &waiting);
-	}
-
-	// get one octets
 	return (read(iface->port_fd, byte, 1) == 1) ? VISCA_SUCCESS : VISCA_FAILURE;
 }
 
@@ -114,6 +104,10 @@ VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 
 	/* output flags */
 	iface->options.c_oflag &= ~OPOST; /* raw output */
+
+	/* Timeout parameters */
+	iface->options.c_cc[VMIN] = 0; /* Return immediately if any data available */
+	iface->options.c_cc[VTIME] = (1000 + 99) / 100; // VTIME is 1/10s
 
 	tcsetattr(fd, TCSANOW, &iface->options);
 
