@@ -443,7 +443,6 @@ typedef struct _VISCA_interface
   v24_port_t port_fd;
 #else /* POSIX */
   int port_fd;
-  struct termios options;
 #endif
   uint32_t baud;
 

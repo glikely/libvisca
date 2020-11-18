@@ -68,6 +68,7 @@ _VISCA_get_byte(VISCAInterface_t *iface, unsigned char *byte)
 uint32_t
 VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 {
+	struct termios options = {};
 	int fd;
 	fd = open(device_name, O_RDWR | O_NDELAY | O_NOCTTY);
 
@@ -81,35 +82,35 @@ VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 
 	fcntl(fd, F_SETFL,0);
 	/* Setting port parameters */
-	tcgetattr(fd, &iface->options);
+	tcgetattr(fd, &options);
 
 	/* control flags */
-	cfsetispeed(&iface->options,B9600);    /* 9600 Bds   */
-	iface->options.c_cflag &= ~PARENB;     /* No parity  */
-	iface->options.c_cflag &= ~CSTOPB;     /*            */
-	iface->options.c_cflag &= ~CSIZE;      /* 8bit       */
-	iface->options.c_cflag |= CS8;         /*            */
-	iface->options.c_cflag &= ~CRTSCTS;    /* No hdw ctl */
+	cfsetispeed(&options,B9600);    /* 9600 Bds   */
+	options.c_cflag &= ~PARENB;     /* No parity  */
+	options.c_cflag &= ~CSTOPB;     /*            */
+	options.c_cflag &= ~CSIZE;      /* 8bit       */
+	options.c_cflag |= CS8;         /*            */
+	options.c_cflag &= ~CRTSCTS;    /* No hdw ctl */
 
 	/* local flags */
-	iface->options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); /* raw input */
+	options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); /* raw input */
 
 	/* input flags
 	 *
-	 * iface->options.c_iflag &= ~(INPCK | ISTRIP); // no parity
-	 * iface->options.c_iflag &= ~(IXON | IXOFF | IXANY); // no soft ctl
+	 * options.c_iflag &= ~(INPCK | ISTRIP); // no parity
+	 * options.c_iflag &= ~(IXON | IXOFF | IXANY); // no soft ctl
 	 */
 	/* patch: bpflegin: set to 0 in order to avoid invalid pan/tilt return values */
-	iface->options.c_iflag = 0;
+	options.c_iflag = 0;
 
 	/* output flags */
-	iface->options.c_oflag &= ~OPOST; /* raw output */
+	options.c_oflag &= ~OPOST; /* raw output */
 
 	/* Timeout parameters */
-	iface->options.c_cc[VMIN] = 0; /* Return immediately if any data available */
-	iface->options.c_cc[VTIME] = (2000 + 99) / 100; // VTIME is 1/10s
+	options.c_cc[VMIN] = 0; /* Return immediately if any data available */
+	options.c_cc[VTIME] = (2000 + 99) / 100; // VTIME is 1/10s
 
-	tcsetattr(fd, TCSANOW, &iface->options);
+	tcsetattr(fd, TCSANOW, &options);
 
 	iface->port_fd = fd;
 	iface->address=0;
