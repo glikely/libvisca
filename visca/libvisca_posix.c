@@ -37,7 +37,7 @@ unsigned int _VISCA_send_packet_with_reply(VISCAInterface_t *iface, VISCACamera_
 /* Implementation of the platform specific code. The following functions must
  * be implemented here:
  *
- * unsigned int _VISCA_write_packet_data(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet);
+ * unsigned int _VISCA_write_packet_data(VISCAInterface_t *iface, VISCAPacket_t *packet);
  * unsigned int _VISCA_get_byte(VISCAInterface_t *iface, unsigned char *buffer);
  * unsigned int VISCA_open_serial(VISCAInterface_t *iface, const char *device_name);
  * unsigned int VISCA_close_serial(VISCAInterface_t *iface);
@@ -45,7 +45,7 @@ unsigned int _VISCA_send_packet_with_reply(VISCAInterface_t *iface, VISCACamera_
  */
 
 uint32_t
-_VISCA_write_packet_data(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet)
+_VISCA_write_packet_data(VISCAInterface_t *iface, VISCAPacket_t *packet)
 {
 	int err;
 

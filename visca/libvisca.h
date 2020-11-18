@@ -449,7 +449,6 @@ typedef struct _VISCA_interface
 
   // VISCA data:
   uint8_t address;
-  uint8_t broadcast;
 
   // RS232 input buffer
   unsigned char ibuf[VISCA_INPUT_BUFFER_SIZE];
@@ -507,7 +506,7 @@ VISCA_API uint32_t
 VISCA_get_camera_info(VISCAInterface_t *iface, VISCACamera_t *camera);
 
 VISCA_API uint32_t
-_VISCA_write_packet_data(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet);
+_VISCA_write_packet_data(VISCAInterface_t *iface, VISCAPacket_t *packet);
 
 VISCA_API uint32_t
 _VISCA_send_packet(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet);

@@ -31,15 +31,12 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	iface.broadcast = 0;
 	if (VISCA_set_address(&iface, &count) != VISCA_SUCCESS) {
 		printf("No cameras found\n");
 		VISCA_close_serial(&iface);
 		exit(1);
 	}
 	printf("Found %i VISCA cameras\n", count);
-
-	iface.broadcast = 0;
 
 	for (camera.address = 1; camera.address < count + 1; camera.address++) {
 		printf("Camera %i:", camera.address);

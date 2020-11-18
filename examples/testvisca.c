@@ -54,7 +54,6 @@ int main(int argc, char **argv)
       exit(1);
     }
 
-  iface.broadcast=0;
   VISCA_set_address(&iface, &camera_num);
   camera.address=1;
   VISCA_clear(&iface, &camera);

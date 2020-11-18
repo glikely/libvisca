@@ -31,7 +31,7 @@
 #include "libvisca.h"
 
 uint32_t
-_VISCA_write_packet_data(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet)
+_VISCA_write_packet_data(VISCAInterface_t *iface, VISCAPacket_t *packet)
 {
 	int i;
 

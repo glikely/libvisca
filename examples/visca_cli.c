@@ -437,7 +437,6 @@ void open_interface() {
     exit(1);
   }
 
-  iface.broadcast=0;
   VISCA_set_address(&iface, &camera_num);
   if(VISCA_set_address(&iface, &camera_num)!=VISCA_SUCCESS) {
 #ifdef WIN

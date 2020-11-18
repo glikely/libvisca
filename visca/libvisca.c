@@ -84,7 +84,7 @@ _VISCA_get_packet(VISCAInterface_t *iface)
 
 
 VISCA_API uint32_t
-_VISCA_get_reply(VISCAInterface_t *iface, VISCACamera_t *camera)
+_VISCA_get_reply(VISCAInterface_t *iface)
 {
   // first message: -------------------
   if (_VISCA_get_packet(iface)!=VISCA_SUCCESS) 
@@ -120,10 +120,10 @@ _VISCA_get_reply(VISCAInterface_t *iface, VISCACamera_t *camera)
 VISCA_API uint32_t
 _VISCA_send_packet_with_reply(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet)
 {
-  if (_VISCA_send_packet(iface,camera,packet)!=VISCA_SUCCESS)
+  if (_VISCA_send_packet(iface, camera, packet) != VISCA_SUCCESS)
     return VISCA_FAILURE;
 
-  if (_VISCA_get_reply(iface,camera)!=VISCA_SUCCESS)
+  if (_VISCA_get_reply(iface) != VISCA_SUCCESS)
     return VISCA_FAILURE;
 
   return VISCA_SUCCESS;
@@ -133,28 +133,24 @@ uint32_t
 _VISCA_send_packet(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t *packet)
 {
     // check data:
-    if ((iface->address>7)||(camera->address>7)||(iface->broadcast>1))
-    {
+    if ((iface->address > 7) || (camera->address > 7)) {
       _VISCA_debug("(%s): Invalid header parameters\n", __FILE__);
-      _VISCA_debug(" %d %d %d   \n", iface->address, camera->address, iface->broadcast);
+      _VISCA_debug(" %d %d\n", iface->address, camera->address);
       return VISCA_FAILURE;
     }
 
-    // build header:
-    packet->bytes[0]=0x80;
-    packet->bytes[0]|=(iface->address << 4);
-    if (iface->broadcast>0)
-    {
-      packet->bytes[0]|=(iface->broadcast << 3);
-      packet->bytes[0]&=0xF8;
-    }
-    else
-      packet->bytes[0]|=camera->address;
-
-    // append footer
+    packet->bytes[0] = 0x80 | ((iface->address & 0x7) << 4) | (camera->address & 0x7);
     _VISCA_append_byte(packet,VISCA_TERMINATOR);
+    return _VISCA_write_packet_data(iface, packet);
+}
 
-    return _VISCA_write_packet_data(iface,camera,packet);
+uint32_t
+_VISCA_send_broadcast(VISCAInterface_t *iface, VISCAPacket_t *packet)
+{
+    // build header:
+    packet->bytes[0] = 0x88 | ((iface->address & 0x7) << 4);
+    _VISCA_append_byte(packet,VISCA_TERMINATOR);
+    return _VISCA_write_packet_data(iface, packet);
 }
 
 /****************************************************************************/
@@ -170,26 +166,15 @@ VISCA_API uint32_t
 VISCA_set_address(VISCAInterface_t *iface, int *camera_num)
 {
   VISCAPacket_t packet;
-  int backup;
-  VISCACamera_t camera; /* dummy camera struct */
-
-  camera.address=0;
-  backup=iface->broadcast;
 
   _VISCA_init_packet(&packet);
   _VISCA_append_byte(&packet,0x30);
   _VISCA_append_byte(&packet,0x01);
 
-  iface->broadcast=1;
-  if (_VISCA_send_packet(iface, &camera, &packet)!=VISCA_SUCCESS)
-    {
-      iface->broadcast=backup;
+  if (_VISCA_send_broadcast(iface, &packet) != VISCA_SUCCESS)
       return VISCA_FAILURE;
-    }
-  else
-    iface->broadcast=backup;
-  
-  if (_VISCA_get_reply(iface, &camera)!=VISCA_SUCCESS)
+
+  if (_VISCA_get_reply(iface) != VISCA_SUCCESS)
     return VISCA_FAILURE;
   else
     {
@@ -223,10 +208,10 @@ VISCA_clear(VISCAInterface_t *iface, VISCACamera_t *camera)
   _VISCA_append_byte(&packet,0x00);
   _VISCA_append_byte(&packet,0x01);
 
-  if (_VISCA_send_packet(iface, camera, &packet)!=VISCA_SUCCESS)
+  if (_VISCA_send_packet(iface, camera, &packet) != VISCA_SUCCESS)
     return VISCA_FAILURE;
   else
-    if (_VISCA_get_reply(iface, camera)!=VISCA_SUCCESS)
+    if (_VISCA_get_reply(iface) != VISCA_SUCCESS)
       return VISCA_FAILURE;
     else
       return VISCA_SUCCESS;
