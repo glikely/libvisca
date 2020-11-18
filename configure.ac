@@ -38,6 +38,7 @@ AC_SUBST(lt_age)
 
 AC_CANONICAL_HOST
 AM_CONDITIONAL([HOST_WIN32], [test x$host_os = xmingw32])
+AM_SILENT_RULES([yes])
 
 pkgincludedir='$(includedir)/visca'
 AC_SUBST(pkgincludedir)
