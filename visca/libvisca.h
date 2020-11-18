@@ -391,39 +391,20 @@
 extern "C" {
 #endif
 
-#ifdef VISCA_WIN
-
-#include <windows.h>
-
 /* timeout in us */
 #define VISCA_SERIAL_WAIT              100000
 
 /* size of the local packet buffer */
 #define VISCA_INPUT_BUFFER_SIZE          1024
 
-/* This is the interface for the Windows platform.
- */
-typedef struct _VISCA_interface
-{
-  // RS232 data:
-  HANDLE port_fd;
-  int baud;
+#ifdef VISCA_WIN
 
-  // VISCA data:
-  int address;
-  int broadcast;
-
-  // RS232 input buffer
-  unsigned char ibuf[VISCA_INPUT_BUFFER_SIZE];
-  int bytes;
-  int type;
-} VISCAInterface_t;
+#include <windows.h>
 
 #ifdef _MSC_VER
 typedef unsigned __int8 uint8_t;
 typedef unsigned __int16 uint16_t;
 typedef unsigned __int32 uint32_t;
-
 #  include <crtdbg.h>
 #else
 #  include <stdint.h>
@@ -445,62 +426,36 @@ typedef unsigned __int32 uint32_t;
 
 #include "v24.h"
 
-/* timeout in us */
-#define VISCA_SERIAL_WAIT              100000
-
-/* size of the local packet buffer */
-#define VISCA_INPUT_BUFFER_SIZE            32
-
-/* This is the interface for the AVR platform.
- */
-typedef struct _VISCA_interface
-{
-	// RS232 data:
-	v24_port_t port_fd;
-
-	// VISCA data:
-	int address;
-	int broadcast;
-
-	// RS232 input buffer
-	unsigned char ibuf[VISCA_INPUT_BUFFER_SIZE];
-	int bytes;
-	int type;
-} VISCAInterface_t;
-
-#else
+#else /* POSIX */
 
 #include <termios.h>
 #include <stdint.h>
 #include <unistd.h>
 
-/* timeout in us */
-#define VISCA_SERIAL_WAIT              100000
+#endif
 
-/* size of the local packet buffer */
-#define VISCA_INPUT_BUFFER_SIZE          1024
-
-/* This is the interface for the POSIX platform.
- */
 typedef struct _VISCA_interface
 {
   // RS232 data:
+#ifdef VISCA_WIN
+  HANDLE port_fd;
+#elif __AVR__
+  v24_port_t port_fd;
+#else /* POSIX */
   int port_fd;
   struct termios options;
+#endif
   uint32_t baud;
 
   // VISCA data:
-  uint32_t address;
-  uint32_t broadcast;
+  uint8_t address;
+  uint8_t broadcast;
 
   // RS232 input buffer
   unsigned char ibuf[VISCA_INPUT_BUFFER_SIZE];
-  uint32_t bytes;
-  uint32_t type;
-
+  unsigned int bytes;
+  unsigned int type;
 } VISCAInterface_t;
-
-#endif
 
 /* INTERFACE STRUCTURE -- this is only a forward declaration to the
  * structure. We declare a pointer to hide the platform specific code.
