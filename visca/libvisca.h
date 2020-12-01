@@ -433,6 +433,12 @@ typedef unsigned __int32 uint32_t;
 
 #endif
 
+typedef struct _VISCA_packet
+{
+  unsigned char bytes[VISCA_BUFFER_SIZE];
+  uint32_t length;
+} VISCAPacket_t;
+
 typedef struct _VISCA_interface
 {
   // RS232 data:
@@ -449,8 +455,7 @@ typedef struct _VISCA_interface
   uint8_t address;
 
   // RS232 input buffer
-  unsigned char ibuf[VISCA_BUFFER_SIZE];
-  unsigned int bytes;
+  VISCAPacket_t ipacket;
 } VISCAInterface_t;
 
 /* INTERFACE STRUCTURE -- this is only a forward declaration to the
@@ -484,12 +489,6 @@ typedef struct _VISCA_title
   unsigned char title[20];
 
 } VISCATitleData_t;
-
-typedef struct _VISCA_packet
-{
-  unsigned char bytes[VISCA_BUFFER_SIZE];
-  uint32_t length;
-} VISCAPacket_t;
 
 /* GENERAL FUNCTIONS */
 

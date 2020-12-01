@@ -70,11 +70,11 @@ _VISCA_get_packet(VISCAInterface_t *iface)
 
   // get octets one by one
   for (pos = 0; pos < VISCA_BUFFER_SIZE; pos++) {
-    if (_VISCA_get_byte(iface, &iface->ibuf[pos]) == VISCA_FAILURE)
+    if (_VISCA_get_byte(iface, &iface->ipacket.bytes[pos]) == VISCA_FAILURE)
       break;
 
-    if (iface->ibuf[pos] == VISCA_TERMINATOR) {
-      iface->bytes = pos + 1;
+    if (iface->ipacket.bytes[pos] == VISCA_TERMINATOR) {
+      iface->ipacket.length = pos + 1;
       return VISCA_SUCCESS;
     }
   }
@@ -90,14 +90,14 @@ _VISCA_get_reply(VISCAInterface_t *iface)
   // first message: -------------------
   if (_VISCA_get_packet(iface)!=VISCA_SUCCESS) 
     return VISCA_FAILURE;
-  type=iface->ibuf[1]&0xF0;
+  type=iface->ipacket.bytes[1]&0xF0;
 
   // skip ack messages
   while (type==VISCA_RESPONSE_ACK)
     {
       if (_VISCA_get_packet(iface)!=VISCA_SUCCESS) 
         return VISCA_FAILURE;
-      type=iface->ibuf[1]&0xF0;
+      type=iface->ipacket.bytes[1]&0xF0;
     }
  
   switch (type)
@@ -181,11 +181,11 @@ VISCA_set_address(VISCAInterface_t *iface, int *camera_num)
          every packet should be 88 30 0x FF, x being
          the camera id+1. The number of cams will thus be
          ibuf[bytes-2]-1  */
-      if ((iface->bytes & 0x3)!=0) /* check multiple of 4 */
+      if ((iface->ipacket.length & 0x3)!=0) /* check multiple of 4 */
 	return VISCA_FAILURE;
       else
 	{
-	  *camera_num=iface->ibuf[iface->bytes-2]-1;
+	  *camera_num=iface->ipacket.bytes[iface->ipacket.length-2]-1;
 	  if ((*camera_num==0)||(*camera_num>7))
 	    return VISCA_FAILURE;
 	  else
@@ -228,13 +228,13 @@ VISCA_get_camera_info(VISCAInterface_t *iface, VISCACamera_t *camera)
   if (_VISCA_send_packet_with_reply(iface, camera, &packet)!=VISCA_SUCCESS)
     return VISCA_FAILURE;
 
-  if (iface->bytes != 10) /* we expect 10 bytes as answer */
+  if (iface->ipacket.length != 10) /* we expect 10 bytes as answer */
     return VISCA_FAILURE;
 
-  camera->vendor=(iface->ibuf[2]<<8) + iface->ibuf[3];
-  camera->model=(iface->ibuf[4]<<8) + iface->ibuf[5];
-  camera->rom_version=(iface->ibuf[6]<<8) + iface->ibuf[7];
-  camera->socket_num=iface->ibuf[8];
+  camera->vendor=(iface->ipacket.bytes[2]<<8) + iface->ipacket.bytes[3];
+  camera->model=(iface->ipacket.bytes[4]<<8) + iface->ipacket.bytes[5];
+  camera->rom_version=(iface->ipacket.bytes[6]<<8) + iface->ipacket.bytes[7];
+  camera->socket_num=iface->ipacket.bytes[8];
   return VISCA_SUCCESS;
 }
 
@@ -1598,7 +1598,7 @@ VISCA_get_power(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *power)
     return err;
   else
     {
-      *power=iface->ibuf[2];
+      *power=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -1618,7 +1618,7 @@ VISCA_get_dzoom(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *power)
   if (err!=VISCA_SUCCESS)
     return err;
   else {
-    *power=iface->ibuf[2];
+    *power=iface->ipacket.bytes[2];
     return VISCA_SUCCESS;
   }
 }
@@ -1638,7 +1638,7 @@ VISCA_get_dzoom_limit(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *v
   if (err!=VISCA_SUCCESS)
     return err;
   else {
-    *value=iface->ibuf[2];
+    *value=iface->ipacket.bytes[2];
     return VISCA_SUCCESS;
   }
 }
@@ -1659,7 +1659,7 @@ VISCA_get_zoom_value(VISCAInterface_t *iface, VISCACamera_t *camera, uint16_t *v
   if (err!=VISCA_SUCCESS)
     return err;
   else {
-    *value=(iface->ibuf[2]<<12)+(iface->ibuf[3]<<8)+(iface->ibuf[4]<<4)+iface->ibuf[5];
+    *value=(iface->ipacket.bytes[2]<<12)+(iface->ipacket.bytes[3]<<8)+(iface->ipacket.bytes[4]<<4)+iface->ipacket.bytes[5];
     return VISCA_SUCCESS;
   }
 
@@ -1681,7 +1681,7 @@ VISCA_get_focus_auto(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *po
     return err;
   else
     {
-      *power=iface->ibuf[2];
+      *power=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -1702,7 +1702,7 @@ VISCA_get_focus_value(VISCAInterface_t *iface, VISCACamera_t *camera, uint16_t *
     return err;
   else
     {
-      *value=(iface->ibuf[2]<<12)+(iface->ibuf[3]<<8)+(iface->ibuf[4]<<4)+iface->ibuf[5];
+      *value=(iface->ipacket.bytes[2]<<12)+(iface->ipacket.bytes[3]<<8)+(iface->ipacket.bytes[4]<<4)+iface->ipacket.bytes[5];
       return VISCA_SUCCESS;
     }
 }
@@ -1723,7 +1723,7 @@ VISCA_get_focus_auto_sense(VISCAInterface_t *iface, VISCACamera_t *camera, uint8
     return err;
   else
     {
-      *mode=iface->ibuf[2];
+      *mode=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -1744,7 +1744,7 @@ VISCA_get_focus_near_limit(VISCAInterface_t *iface, VISCACamera_t *camera, uint1
     return err;
   else
     {
-      *value=(iface->ibuf[2]<<12)+(iface->ibuf[3]<<8)+(iface->ibuf[4]<<4)+iface->ibuf[5];
+      *value=(iface->ipacket.bytes[2]<<12)+(iface->ipacket.bytes[3]<<8)+(iface->ipacket.bytes[4]<<4)+iface->ipacket.bytes[5];
       return VISCA_SUCCESS;
     }
 }
@@ -1765,7 +1765,7 @@ VISCA_get_whitebal_mode(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t 
     return err;
   else
     {
-      *mode=iface->ibuf[2];
+      *mode=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -1786,7 +1786,7 @@ VISCA_get_rgain_value(VISCAInterface_t *iface, VISCACamera_t *camera, uint16_t *
     return err;
   else
     {
-      *value=(iface->ibuf[2]<<12)+(iface->ibuf[3]<<8)+(iface->ibuf[4]<<4)+iface->ibuf[5];
+      *value=(iface->ipacket.bytes[2]<<12)+(iface->ipacket.bytes[3]<<8)+(iface->ipacket.bytes[4]<<4)+iface->ipacket.bytes[5];
       return VISCA_SUCCESS;
     }
 }
@@ -1807,7 +1807,7 @@ VISCA_get_bgain_value(VISCAInterface_t *iface, VISCACamera_t *camera, uint16_t *
     return err;
   else
     {
-      *value=(iface->ibuf[2]<<12)+(iface->ibuf[3]<<8)+(iface->ibuf[4]<<4)+iface->ibuf[5];
+      *value=(iface->ipacket.bytes[2]<<12)+(iface->ipacket.bytes[3]<<8)+(iface->ipacket.bytes[4]<<4)+iface->ipacket.bytes[5];
       return VISCA_SUCCESS;
     }
 }
@@ -1828,7 +1828,7 @@ VISCA_get_auto_exp_mode(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t 
     return err;
   else
     {
-      *mode=iface->ibuf[2];
+      *mode=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -1849,7 +1849,7 @@ VISCA_get_slow_shutter_auto(VISCAInterface_t *iface, VISCACamera_t *camera, uint
     return err;
   else
     {
-      *mode=iface->ibuf[2];
+      *mode=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -1870,7 +1870,7 @@ VISCA_get_shutter_value(VISCAInterface_t *iface, VISCACamera_t *camera, uint16_t
     return err;
   else
     {
-      *value=(iface->ibuf[2]<<12)+(iface->ibuf[3]<<8)+(iface->ibuf[4]<<4)+iface->ibuf[5];
+      *value=(iface->ipacket.bytes[2]<<12)+(iface->ipacket.bytes[3]<<8)+(iface->ipacket.bytes[4]<<4)+iface->ipacket.bytes[5];
       return VISCA_SUCCESS;
     }
 }
@@ -1891,7 +1891,7 @@ VISCA_get_iris_value(VISCAInterface_t *iface, VISCACamera_t *camera, uint16_t *v
     return err;
   else
     {
-      *value=(iface->ibuf[2]<<12)+(iface->ibuf[3]<<8)+(iface->ibuf[4]<<4)+iface->ibuf[5];
+      *value=(iface->ipacket.bytes[2]<<12)+(iface->ipacket.bytes[3]<<8)+(iface->ipacket.bytes[4]<<4)+iface->ipacket.bytes[5];
       return VISCA_SUCCESS;
     }
 }
@@ -1912,7 +1912,7 @@ VISCA_get_gain_value(VISCAInterface_t *iface, VISCACamera_t *camera, uint16_t *v
     return err;
   else
     {
-      *value=(iface->ibuf[2]<<12)+(iface->ibuf[3]<<8)+(iface->ibuf[4]<<4)+iface->ibuf[5];
+      *value=(iface->ipacket.bytes[2]<<12)+(iface->ipacket.bytes[3]<<8)+(iface->ipacket.bytes[4]<<4)+iface->ipacket.bytes[5];
       return VISCA_SUCCESS;
     }
 }
@@ -1933,7 +1933,7 @@ VISCA_get_bright_value(VISCAInterface_t *iface, VISCACamera_t *camera, uint16_t 
     return err;
   else
     {
-      *value=(iface->ibuf[2]<<12)+(iface->ibuf[3]<<8)+(iface->ibuf[4]<<4)+iface->ibuf[5];
+      *value=(iface->ipacket.bytes[2]<<12)+(iface->ipacket.bytes[3]<<8)+(iface->ipacket.bytes[4]<<4)+iface->ipacket.bytes[5];
       return VISCA_SUCCESS;
     }
 }
@@ -1954,7 +1954,7 @@ VISCA_get_exp_comp_power(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t
     return err;
   else
     {
-      *power=iface->ibuf[2];
+      *power=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -1975,7 +1975,7 @@ VISCA_get_exp_comp_value(VISCAInterface_t *iface, VISCACamera_t *camera, uint16_
     return err;
   else
     {
-      *value=(iface->ibuf[2]<<12)+(iface->ibuf[3]<<8)+(iface->ibuf[4]<<4)+iface->ibuf[5];
+      *value=(iface->ipacket.bytes[2]<<12)+(iface->ipacket.bytes[3]<<8)+(iface->ipacket.bytes[4]<<4)+iface->ipacket.bytes[5];
       return VISCA_SUCCESS;
     }
 }
@@ -1996,7 +1996,7 @@ VISCA_get_backlight_comp(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t
     return err;
   else
     {
-      *power=iface->ibuf[2];
+      *power=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -2017,7 +2017,7 @@ VISCA_get_aperture_value(VISCAInterface_t *iface, VISCACamera_t *camera, uint16_
     return err;
   else
     {
-      *value=(iface->ibuf[2]<<12)+(iface->ibuf[3]<<8)+(iface->ibuf[4]<<4)+iface->ibuf[5];
+      *value=(iface->ipacket.bytes[2]<<12)+(iface->ipacket.bytes[3]<<8)+(iface->ipacket.bytes[4]<<4)+iface->ipacket.bytes[5];
       return VISCA_SUCCESS;
     }
 }
@@ -2038,7 +2038,7 @@ VISCA_get_zero_lux_shot(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t 
     return err;
   else
     {
-      *power=iface->ibuf[2];
+      *power=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -2059,7 +2059,7 @@ VISCA_get_ir_led(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *power)
     return err;
   else
     {
-      *power=iface->ibuf[2];
+      *power=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -2080,7 +2080,7 @@ VISCA_get_wide_mode(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *mod
     return err;
   else
     {
-      *mode=iface->ibuf[2];
+      *mode=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -2101,7 +2101,7 @@ VISCA_get_mirror(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *power)
     return err;
   else
     {
-      *power=iface->ibuf[2];
+      *power=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -2122,7 +2122,7 @@ VISCA_get_freeze(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *power)
     return err;
   else
     {
-      *power=iface->ibuf[2];
+      *power=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -2143,7 +2143,7 @@ VISCA_get_picture_effect(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t
     return err;
   else
     {
-      *mode=iface->ibuf[2];
+      *mode=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -2164,7 +2164,7 @@ VISCA_get_digital_effect(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t
     return err;
   else
     {
-      *mode=iface->ibuf[2];
+      *mode=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -2185,7 +2185,7 @@ VISCA_get_digital_effect_level(VISCAInterface_t *iface, VISCACamera_t *camera, u
     return err;
   else
     {
-      *value=(iface->ibuf[2]<<12)+(iface->ibuf[3]<<8)+(iface->ibuf[4]<<4)+iface->ibuf[5];
+      *value=(iface->ipacket.bytes[2]<<12)+(iface->ipacket.bytes[3]<<8)+(iface->ipacket.bytes[4]<<4)+iface->ipacket.bytes[5];
       return VISCA_SUCCESS;
     }
 }
@@ -2206,7 +2206,7 @@ VISCA_get_memory(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *channe
     return err;
   else
     {
-      *channel=iface->ibuf[2];
+      *channel=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -2227,7 +2227,7 @@ VISCA_get_display(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *power
     return err;
   else
     {
-      *power=iface->ibuf[2];
+      *power=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -2248,7 +2248,7 @@ VISCA_get_id(VISCAInterface_t *iface, VISCACamera_t *camera, uint16_t *id)
     return err;
   else
     {
-      *id=(iface->ibuf[2]<<12)+(iface->ibuf[3]<<8)+(iface->ibuf[4]<<4)+iface->ibuf[5];
+      *id=(iface->ipacket.bytes[2]<<12)+(iface->ipacket.bytes[3]<<8)+(iface->ipacket.bytes[4]<<4)+iface->ipacket.bytes[5];
       return VISCA_SUCCESS;
     }
 }
@@ -2605,7 +2605,7 @@ VISCA_get_videosystem(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *s
     return err;
   else
     {
-      *system=iface->ibuf[2];
+      *system=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -2625,7 +2625,7 @@ VISCA_get_pantilt_mode(VISCAInterface_t *iface, VISCACamera_t *camera, uint16_t 
     return err;
   else
     {
-      *status = ((iface->ibuf[2] & 0xff) << 8) + (iface->ibuf[3] & 0xff);
+      *status = ((iface->ipacket.bytes[2] & 0xff) << 8) + (iface->ipacket.bytes[3] & 0xff);
       return VISCA_SUCCESS;
     }
 }
@@ -2645,8 +2645,8 @@ VISCA_get_pantilt_maxspeed(VISCAInterface_t *iface, VISCACamera_t *camera, uint8
     return err;
   else
     {
-      *max_pan_speed = (iface->ibuf[2] & 0xff);
-      *max_tilt_speed = (iface->ibuf[3] & 0xff);
+      *max_pan_speed = (iface->ipacket.bytes[2] & 0xff);
+      *max_tilt_speed = (iface->ipacket.bytes[3] & 0xff);
       return VISCA_SUCCESS;
     }
 }
@@ -2667,10 +2667,10 @@ VISCA_get_pantilt_position(VISCAInterface_t *iface, VISCACamera_t *camera, int *
     return err;
   else
     {
-      pan_pos  = ((iface->ibuf[3] & 0xf) << 12) + ((iface->ibuf[4] & 0xf) << 8) + ((iface->ibuf[5] & 0xf) << 4) + (iface->ibuf[6] & 0xf); 
-      tilt_pos = ((iface->ibuf[7] & 0xf) << 12) + ((iface->ibuf[8] & 0xf) << 8) + ((iface->ibuf[9] & 0xf) << 4) + (iface->ibuf[10] & 0xf); 
+      pan_pos  = ((iface->ipacket.bytes[3] & 0xf) << 12) + ((iface->ipacket.bytes[4] & 0xf) << 8) + ((iface->ipacket.bytes[5] & 0xf) << 4) + (iface->ipacket.bytes[6] & 0xf); 
+      tilt_pos = ((iface->ipacket.bytes[7] & 0xf) << 12) + ((iface->ipacket.bytes[8] & 0xf) << 8) + ((iface->ipacket.bytes[9] & 0xf) << 4) + (iface->ipacket.bytes[10] & 0xf); 
 
-      if (!iface->ibuf[2]) *pan_position=pan_pos;
+      if (!iface->ipacket.bytes[2]) *pan_position=pan_pos;
       else *pan_position=((int)pan_pos) - 65536;
       if (tilt_pos<0x8000) *tilt_position=tilt_pos;
       else *tilt_position=((int)tilt_pos) - 65536;
@@ -2694,7 +2694,7 @@ VISCA_get_datascreen(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *st
     return err;
   else
     {
-      *status=iface->ibuf[2];
+      *status=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -2716,7 +2716,7 @@ VISCA_get_register(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t reg_n
     return err;
   else
     {
-      *reg_val=(iface->ibuf[2]<<4)+iface->ibuf[3];
+      *reg_val=(iface->ipacket.bytes[2]<<4)+iface->ipacket.bytes[3];
       return VISCA_SUCCESS;
     }
 }
@@ -3212,7 +3212,7 @@ VISCA_get_keylock(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *power
     return err;
   else
     {
-      *power=iface->ibuf[2];
+      *power=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -3233,7 +3233,7 @@ VISCA_get_wide_con_lens(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t 
     return err;
   else
     {
-      *power=iface->ibuf[2];
+      *power=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -3254,7 +3254,7 @@ VISCA_get_atmd_mode(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *pow
     return err;
   else
     {
-      *power=iface->ibuf[2];
+      *power=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -3275,7 +3275,7 @@ VISCA_get_at_mode(VISCAInterface_t *iface, VISCACamera_t *camera, uint16_t *valu
     return err;
   else
     {
-      *value=((iface->ibuf[2] & 0xff) << 8) + (iface->ibuf[3] & 0xff);
+      *value=((iface->ipacket.bytes[2] & 0xff) << 8) + (iface->ipacket.bytes[3] & 0xff);
       return VISCA_SUCCESS;
     }
 }
@@ -3296,7 +3296,7 @@ VISCA_get_at_entry(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *powe
     return err;
   else
     {
-      *power=iface->ibuf[2];
+      *power=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -3317,7 +3317,7 @@ VISCA_get_md_mode(VISCAInterface_t *iface, VISCACamera_t *camera, uint16_t *valu
     return err;
   else
     {
-      *value=((iface->ibuf[2] & 0xff) << 8) + (iface->ibuf[3] & 0xff);
+      *value=((iface->ipacket.bytes[2] & 0xff) << 8) + (iface->ipacket.bytes[3] & 0xff);
       return VISCA_SUCCESS;
     }
 }
@@ -3338,7 +3338,7 @@ VISCA_get_md_ylevel(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *pow
     return err;
   else
     {
-      *power=(iface->ibuf[3] & 0x0f);
+      *power=(iface->ipacket.bytes[3] & 0x0f);
       return VISCA_SUCCESS;
     }
 }
@@ -3359,7 +3359,7 @@ VISCA_get_md_huelevel(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *p
     return err;
   else
     {
-      *power=(iface->ibuf[3] & 0x0f);
+      *power=(iface->ipacket.bytes[3] & 0x0f);
       return VISCA_SUCCESS;
     }
 }
@@ -3380,7 +3380,7 @@ VISCA_get_md_size(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *power
     return err;
   else
     {
-      *power=(iface->ibuf[3] & 0x0f);
+      *power=(iface->ipacket.bytes[3] & 0x0f);
       return VISCA_SUCCESS;
     }
 }
@@ -3401,7 +3401,7 @@ VISCA_get_md_disptime(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *p
     return err;
   else
     {
-      *power=(iface->ibuf[3] & 0x0f);
+      *power=(iface->ipacket.bytes[3] & 0x0f);
       return VISCA_SUCCESS;
     }
 }
@@ -3422,7 +3422,7 @@ VISCA_get_md_refmode(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *po
     return err;
   else
     {
-      *power=iface->ibuf[2];
+      *power=iface->ipacket.bytes[2];
       return VISCA_SUCCESS;
     }
 }
@@ -3443,7 +3443,7 @@ VISCA_get_md_reftime(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *po
     return err;
   else
     {
-      *power=(iface->ibuf[3] & 0x0f);
+      *power=(iface->ipacket.bytes[3] & 0x0f);
       return VISCA_SUCCESS;
     }
 }
@@ -3465,9 +3465,9 @@ VISCA_get_at_obj_pos(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *xp
     return err;
   else
     {
-      *xpos=iface->ibuf[2];
-      *ypos=iface->ibuf[3];
-      *status=(iface->ibuf[4] & 0x0f);
+      *xpos=iface->ipacket.bytes[2];
+      *ypos=iface->ipacket.bytes[3];
+      *status=(iface->ipacket.bytes[4] & 0x0f);
       return VISCA_SUCCESS;
     }
 }
@@ -3488,9 +3488,9 @@ VISCA_get_md_obj_pos(VISCAInterface_t *iface, VISCACamera_t *camera, uint8_t *xp
     return err;
   else
     {
-      *xpos=iface->ibuf[2];
-      *ypos=iface->ibuf[3];
-      *status=(iface->ibuf[4] & 0x0f);
+      *xpos=iface->ipacket.bytes[2];
+      *ypos=iface->ipacket.bytes[3];
+      *status=(iface->ipacket.bytes[4] & 0x0f);
       return VISCA_SUCCESS;
     }
 }
