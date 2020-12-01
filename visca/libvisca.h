@@ -381,7 +381,6 @@
 #define VISCA_DOWN                       0x03
 
 /* response types */
-#define VISCA_RESPONSE_CLEAR             0x40
 #define VISCA_RESPONSE_ADDRESS           0x30
 #define VISCA_RESPONSE_ACK               0x40
 #define VISCA_RESPONSE_COMPLETED         0x50

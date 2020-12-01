@@ -101,9 +101,6 @@ _VISCA_get_reply(VISCAInterface_t *iface)
  
   switch (iface->type)
     {
-    case VISCA_RESPONSE_CLEAR:
-      return VISCA_SUCCESS;
-      break;
     case VISCA_RESPONSE_ADDRESS:
       return VISCA_SUCCESS;
       break;
