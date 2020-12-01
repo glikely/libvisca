@@ -69,7 +69,7 @@ _VISCA_get_packet(VISCAInterface_t *iface)
   int pos = 0;
 
   // get octets one by one
-  for (pos = 0; pos < VISCA_INPUT_BUFFER_SIZE; pos++) {
+  for (pos = 0; pos < VISCA_BUFFER_SIZE; pos++) {
     if (_VISCA_get_byte(iface, &iface->ibuf[pos]) == VISCA_FAILURE)
       break;
 

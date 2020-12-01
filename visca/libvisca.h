@@ -394,7 +394,7 @@ extern "C" {
 #define VISCA_SERIAL_WAIT              100000
 
 /* size of the local packet buffer */
-#define VISCA_INPUT_BUFFER_SIZE          1024
+#define VISCA_BUFFER_SIZE                  32
 
 #ifdef VISCA_WIN
 
@@ -449,7 +449,7 @@ typedef struct _VISCA_interface
   uint8_t address;
 
   // RS232 input buffer
-  unsigned char ibuf[VISCA_INPUT_BUFFER_SIZE];
+  unsigned char ibuf[VISCA_BUFFER_SIZE];
   unsigned int bytes;
   unsigned int type;
 } VISCAInterface_t;
@@ -488,7 +488,7 @@ typedef struct _VISCA_title
 
 typedef struct _VISCA_packet
 {
-  unsigned char bytes[32];
+  unsigned char bytes[VISCA_BUFFER_SIZE];
   uint32_t length;
 } VISCAPacket_t;
 
