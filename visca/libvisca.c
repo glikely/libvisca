@@ -86,20 +86,21 @@ _VISCA_get_packet(VISCAInterface_t *iface)
 VISCA_API uint32_t
 _VISCA_get_reply(VISCAInterface_t *iface)
 {
+  uint8_t type;
   // first message: -------------------
   if (_VISCA_get_packet(iface)!=VISCA_SUCCESS) 
     return VISCA_FAILURE;
-  iface->type=iface->ibuf[1]&0xF0;
+  type=iface->ibuf[1]&0xF0;
 
   // skip ack messages
-  while (iface->type==VISCA_RESPONSE_ACK)
+  while (type==VISCA_RESPONSE_ACK)
     {
       if (_VISCA_get_packet(iface)!=VISCA_SUCCESS) 
         return VISCA_FAILURE;
-      iface->type=iface->ibuf[1]&0xF0;
+      type=iface->ibuf[1]&0xF0;
     }
  
-  switch (iface->type)
+  switch (type)
     {
     case VISCA_RESPONSE_ADDRESS:
       return VISCA_SUCCESS;

@@ -451,7 +451,6 @@ typedef struct _VISCA_interface
   // RS232 input buffer
   unsigned char ibuf[VISCA_BUFFER_SIZE];
   unsigned int bytes;
-  unsigned int type;
 } VISCAInterface_t;
 
 /* INTERFACE STRUCTURE -- this is only a forward declaration to the
