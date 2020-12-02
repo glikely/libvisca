@@ -439,6 +439,11 @@ typedef struct _VISCA_packet
   uint32_t length;
 } VISCAPacket_t;
 
+#define VISCA_PACKET_SENDER(pkt) (((pkt)->bytes[0] & 0x70) >> 4)
+#define VISCA_PACKET_RECEIVER(pkt) ((pkt)->bytes[0] & 0x0F)
+#define VISCA_PACKET_TYPE(pkt) ((pkt)->bytes[1] & 0xf0)
+#define VISCA_PACKET_SOCKET(pkt) ((pkt)->bytes[1] & 0xf)
+
 typedef struct _VISCA_interface
 {
   // RS232 data:
