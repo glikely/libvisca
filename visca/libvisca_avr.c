@@ -64,6 +64,10 @@ _VISCA_get_byte(VISCAInterface_t *iface, unsigned char *buffer)
 uint32_t
 VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 {
+	iface->reply_packet = NULL;
+	iface->ipacket.length = 0;
+	iface->busy = 0;
+
 	/* Hey, this is a microcontroller. We don't have UART device names. ;-)
 	 *
 	 * The used already opened

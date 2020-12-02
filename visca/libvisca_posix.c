@@ -20,7 +20,6 @@
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
-
 #include "libvisca.h"
 #include <string.h>
 #include <fcntl.h>
@@ -49,16 +48,23 @@ _VISCA_write_packet_data(VISCAInterface_t *iface, VISCAPacket_t *packet)
 {
 	int err;
 
+#ifdef DEBUG
+	int i;
+	fprintf(stderr, "Sending packet length:%i data:", packet->length);
+	for (i = 0; i < packet->length; i++)
+		fprintf(stderr, " %.2x", packet->bytes[i]);
+	fprintf(stderr, "\n");
+#endif
+
 	err = write(iface->port_fd, packet->bytes, packet->length);
 	if ( err < packet->length )
 		return VISCA_FAILURE;
 	return VISCA_SUCCESS;
 }
 
-uint32_t
-_VISCA_get_byte(VISCAInterface_t *iface, unsigned char *byte)
+ssize_t _VISCA_read_bytes(VISCAInterface_t *iface, unsigned char *read_buffer, size_t size)
 {
-	return (read(iface->port_fd, byte, 1) == 1) ? VISCA_SUCCESS : VISCA_FAILURE;
+	return read(iface->port_fd, read_buffer, size);
 }
 
 /***********************************/
@@ -70,6 +76,11 @@ VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 {
 	struct termios options = {};
 	int fd;
+
+	iface->reply_packet = NULL;
+	iface->ipacket.length = 0;
+	iface->busy = 0;
+
 	fd = open(device_name, O_RDWR | O_NDELAY | O_NOCTTY);
 
 	if (fd == -1) {

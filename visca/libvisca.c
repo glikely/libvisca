@@ -32,6 +32,7 @@
 # endif
 #endif
 
+uint32_t _VISCA_set_address(VISCAInterface_t *iface);
 
 /********************************/
 /*      PRIVATE FUNCTIONS       */
@@ -65,58 +66,72 @@ _VISCA_init_packet(VISCAPacket_t *packet)
   packet->length=1;
 }
 
-
-uint32_t
-_VISCA_get_packet(VISCAInterface_t *iface)
+void _VISCA_iface_receive_packet(VISCAInterface_t *iface, VISCAPacket_t *pkt)
 {
-  int pos = 0;
-
-  // get octets one by one
-  for (pos = 0; pos < VISCA_BUFFER_SIZE; pos++) {
-    if (_VISCA_get_byte(iface, &iface->ipacket.bytes[pos]) == VISCA_FAILURE)
-      break;
-
-    if (iface->ipacket.bytes[pos] == VISCA_TERMINATOR) {
-      iface->ipacket.length = pos + 1;
-      return VISCA_SUCCESS;
-    }
-  }
-
-  return VISCA_FAILURE;
+	switch (VISCA_PACKET_TYPE(pkt)) {
+	case VISCA_RESPONSE_ADDRESS:
+		switch (VISCA_PACKET_SOCKET(pkt)) {
+		case 0:
+			iface->num_cameras = (pkt->bytes[2] & 0x7) - 1;
+			iface->busy = 0; /* Last command has completed */
+			break;
+		case 8:
+			/* network change, trigger a change */
+			_VISCA_set_address(iface);
+			break;
+		default:
+			break;
+		}
+		break;
+	case VISCA_RESPONSE_ACK:
+		/* Don't do anything with the ack yet */
+		break;
+	case VISCA_RESPONSE_COMPLETED:
+	case VISCA_RESPONSE_ERROR:
+		if (iface->reply_packet) {
+			*iface->reply_packet = iface->ipacket;
+			iface->reply_packet = NULL;
+		}
+		iface->busy = 0; /* Last command has completed */
+		break;
+	default:
+		/* Unknown */
+		break;
+	}
 }
 
+VISCA_API uint32_t
+_VISCA_loop(VISCAInterface_t *iface)
+{
+	VISCAPacket_t *pkt = &iface->ipacket;
+	unsigned char buffer[64];
+	ssize_t i, count;
+
+	count = _VISCA_read_bytes(iface, buffer, sizeof(buffer));
+	if (count <= 0)
+		return VISCA_FAILURE;
+
+	for (i = 0; i < count; i++) {
+		_VISCA_append_byte(pkt, buffer[i]);
+		if (buffer[i] == 0xff) {
+			/* End of packet, process the packet and reset receive buffer*/
+			if (pkt->length >= 3)
+				_VISCA_iface_receive_packet(iface, pkt);
+			pkt->length = 0;
+		}
+	}
+	return VISCA_SUCCESS;
+}
 
 VISCA_API uint32_t
 _VISCA_get_reply(VISCAInterface_t *iface, VISCAPacket_t *reply)
 {
-  // first message: -------------------
-  if (_VISCA_get_packet(iface)!=VISCA_SUCCESS)
-    return VISCA_FAILURE;
-
-  // skip ack messages
-  while (VISCA_PACKET_TYPE(&iface->ipacket) == VISCA_RESPONSE_ACK)
-    {
-      if (_VISCA_get_packet(iface)!=VISCA_SUCCESS)
-        return VISCA_FAILURE;
-    }
-
-  /* Copy reply into result buffer */
-  if (reply)
-    *reply = iface->ipacket;
-
-  switch (VISCA_PACKET_TYPE(&iface->ipacket))
-    {
-    case VISCA_RESPONSE_ADDRESS:
-      return VISCA_SUCCESS;
-      break;
-    case VISCA_RESPONSE_COMPLETED:
-      return VISCA_SUCCESS;
-      break;
-    case VISCA_RESPONSE_ERROR:
-      return VISCA_SUCCESS;
-      break;
-    }
-  return VISCA_FAILURE;
+	iface->reply_packet = reply;
+	while (iface->busy) {
+		if (_VISCA_loop(iface) == VISCA_FAILURE)
+			break;
+	}
+	return iface->busy ? VISCA_FAILURE : VISCA_SUCCESS;
 }
 
 VISCA_API uint32_t
@@ -144,6 +159,7 @@ _VISCA_send_packet(VISCAInterface_t *iface, VISCACamera_t *camera, VISCAPacket_t
       return VISCA_FAILURE;
     }
 
+    iface->busy = 1; /* Mark interface busy until reply received */
     packet->bytes[0] = 0x80 | (camera->address & 0x7);
     _VISCA_append_byte(packet,VISCA_TERMINATOR);
     return _VISCA_write_packet_data(iface, packet);
@@ -153,6 +169,7 @@ uint32_t
 _VISCA_send_broadcast(VISCAInterface_t *iface, VISCAPacket_t *packet)
 {
     // build header:
+    iface->busy = 1; /* Mark interface busy until reply received */
     packet->bytes[0] = 0x88;
     _VISCA_append_byte(packet,VISCA_TERMINATOR);
     return _VISCA_write_packet_data(iface, packet);
@@ -168,7 +185,7 @@ _VISCA_send_broadcast(VISCAInterface_t *iface, VISCAPacket_t *packet)
 /***********************************/
 
 VISCA_API uint32_t
-VISCA_set_address(VISCAInterface_t *iface, int *camera_num)
+_VISCA_set_address(VISCAInterface_t *iface)
 {
   VISCAPacket_t packet;
 
@@ -176,30 +193,20 @@ VISCA_set_address(VISCAInterface_t *iface, int *camera_num)
   _VISCA_append_byte(&packet,0x30);
   _VISCA_append_byte(&packet,0x01);
 
-  if (_VISCA_send_broadcast(iface, &packet) != VISCA_SUCCESS)
-      return VISCA_FAILURE;
+  return _VISCA_send_broadcast(iface, &packet);
+}
 
-  if (_VISCA_get_reply(iface, &packet) != VISCA_SUCCESS)
-    return VISCA_FAILURE;
-  else
-    {
-      /* We parse the message from the camera here  */
-      /* We expect to receive 4*camera_num bytes,
-         every packet should be 88 30 0x FF, x being
-         the camera id+1. The number of cams will thus be
-         ibuf[bytes-2]-1  */
-      if ((iface->ipacket.length & 0x3)!=0) /* check multiple of 4 */
-	return VISCA_FAILURE;
-      else
-	{
-	  *camera_num=iface->ipacket.bytes[iface->ipacket.length-2]-1;
-	  if ((*camera_num==0)||(*camera_num>7))
-	    return VISCA_FAILURE;
-	  else
-	    return VISCA_SUCCESS;
-	}
-    }
-  
+VISCA_API uint32_t
+VISCA_set_address(VISCAInterface_t *iface, int *camera_num)
+{
+	if (_VISCA_set_address(iface) != VISCA_SUCCESS)
+		return VISCA_FAILURE;
+
+	if (_VISCA_get_reply(iface, NULL) != VISCA_SUCCESS)
+		return VISCA_FAILURE;
+
+	*camera_num = iface->num_cameras;
+	return VISCA_SUCCESS;
 }
 
 

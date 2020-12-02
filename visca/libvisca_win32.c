@@ -93,6 +93,10 @@ VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 	DCB      m_dcb;
 	COMMTIMEOUTS cto;
 
+	iface->reply_packet = NULL;
+	iface->ipacket.length = 0;
+	iface->busy = 0;
+
 	iface->port_fd = CreateFile(device_name,
 			    GENERIC_READ | GENERIC_WRITE,
 			    0, // exclusive access
