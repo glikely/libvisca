@@ -451,9 +451,6 @@ typedef struct _VISCA_interface
 #endif
   uint32_t baud;
 
-  // VISCA data:
-  uint8_t address;
-
   // RS232 input buffer
   VISCAPacket_t ipacket;
 } VISCAInterface_t;

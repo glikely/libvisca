@@ -168,8 +168,6 @@ VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 
 	// =========================================
 	// If all of these API's were successful then the port is ready for use.
-	iface->address = 0;
-
 	return VISCA_SUCCESS;
 
  err_setup:

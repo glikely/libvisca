@@ -76,7 +76,6 @@ VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 	}
 
 	iface->port_fd = UART_VISCA;
-	iface->address = 0;
 
 	return VISCA_SUCCESS;
 }

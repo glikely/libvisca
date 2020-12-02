@@ -113,7 +113,6 @@ VISCA_open_serial(VISCAInterface_t *iface, const char *device_name)
 	tcsetattr(fd, TCSANOW, &options);
 
 	iface->port_fd = fd;
-	iface->address=0;
 
 	return VISCA_SUCCESS;
 }
