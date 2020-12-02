@@ -40,17 +40,20 @@
 void
 _VISCA_append_byte(VISCAPacket_t *packet, unsigned char byte)
 {
-  packet->bytes[packet->length]=byte;
-  (packet->length)++;
+	if (packet->length >= VISCA_BUFFER_SIZE)
+		return;
+	packet->bytes[packet->length++] = byte;
 }
 
 void
 _VISCA_encode_uint16(VISCAPacket_t *packet, uint16_t word)
 {
-  packet->bytes[packet->length++] = (word & 0xf000) >> 12;
-  packet->bytes[packet->length++] = (word & 0x0f00) >> 8;
-  packet->bytes[packet->length++] = (word & 0x00f0) >> 4;
-  packet->bytes[packet->length++] = word & 0x000f;
+	if (packet->length >= (VISCA_BUFFER_SIZE - 3))
+		return;
+	packet->bytes[packet->length++] = (word & 0xf000) >> 12;
+	packet->bytes[packet->length++] = (word & 0x0f00) >> 8;
+	packet->bytes[packet->length++] = (word & 0x00f0) >> 4;
+	packet->bytes[packet->length++] = word & 0x000f;
 }
 
 
