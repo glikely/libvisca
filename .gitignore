@@ -17,5 +17,9 @@ libtool
 ltmain.sh
 missing
 stamp-h1
+m4
 *.pc
 *~
+*.exe
+*.o
+*.lo

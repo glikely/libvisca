@@ -1,5 +1,6 @@
 # process this file with autoconf to get a configure script
 AC_INIT(libvisca, 1.1.1)
+AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([visca/libvisca.c])
 AM_INIT_AUTOMAKE
 
